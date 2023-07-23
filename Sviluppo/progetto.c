@@ -124,7 +124,7 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
         end_node = distance;
     }
 
-    list_path *paths;
+    list_path *paths = NULL;
     int len_paths = 0;
     int index_path = 0;
     int *previous_stations;
@@ -139,17 +139,22 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
     previous_stations = (int *) calloc(len_previous_stations, sizeof(int));
     previous_stations[0] = end_node;
 
-    int *path_curr;
+    int *path_curr = NULL;
     int len_path_curr = 0;
     int last_station = 0;
-    int *next_stations;
+    int *next_stations = NULL;
     int len_next_stations = 0;
+    
+    int index;
+    int next_station = 0;
+    int* path_new = NULL;
+    int len_path_new = 0;
 
     while (index_path < len_paths) {
         path_curr = (paths + index_path)->path;
         len_path_curr = (paths + index_path)->len_path;
         last_station = path_curr[len_path_curr - 1];
-        int index = in_highway(highway, highway_len, last_station);
+        index = in_highway(highway, highway_len, last_station);
         if (distance < arrival) {
             next_stations = (highway + index)->right_queue;
             len_next_stations = (highway + index)->len_rqueue;
@@ -165,13 +170,18 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
             for (int i = 0; i < len_path_curr; i++) {
                 path[i] = path_curr[i];
             }
+            for (int i = 0; i < len_paths; i++) {
+                free((paths + i)->path);
+            }
+            free(previous_stations);
+            free(paths);
+            free(path_curr);
             return len_path_curr;
         }
         for (int i = 0; i < len_next_stations; i++) {
-            int next_station = next_stations[i];
+            next_station = next_stations[i];
             if (in_array(previous_stations, len_previous_stations, next_station) == 0) {
-                int* path_new;
-                int len_path_new = 0;
+                len_path_new = 0;
                 len_previous_stations++;
                 previous_stations = (int *) realloc(previous_stations, len_previous_stations * sizeof(int));  
                 previous_stations[len_previous_stations - 1] = next_station;
@@ -189,31 +199,37 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
         }
         index_path++;
     }
+    for (int i = 0; i < len_paths; i++) {
+        free((paths + i)->path);
+    }
+    free(previous_stations);
+    free(paths);
+    free(path_curr);
     return 0;
 }
 
 int main (int argc, char *argv[])
 {
     char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    FILE *file_input;
-    FILE *file_output;
+    size_t line_len = 0;
+    ssize_t line_read;
+    FILE *file_input = NULL;
+    FILE *file_output = NULL;
 
     // file_input = fopen(argv[1], "r");
-    file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_111.txt", "r");
+    file_input = fopen("Test/archivio_test_aperti/open_50.txt", "r");
     if (file_input == NULL) {
         perror("Error opening input file");
         return(0);
     }
-    file_output = fopen("output.txt", "w");
+    file_output = fopen("Sviluppo/output.txt", "w");
     if (file_output == NULL) {
         perror("Error opening output file");
         return(0);
     }
 
-    char *command;
-    char *distance_c;
+    char *command = NULL;
+    char *distance_c = NULL;
     int distance = 0;
     int arrival = 0;
     int highway_len = 64;
@@ -221,11 +237,19 @@ int main (int argc, char *argv[])
     int index = 0;
     int len_cars = 0;
     int car = 0;
-    int *curr_ptr;
-    station* highway;
+    int *curr_ptr = NULL;
+    station* highway = NULL;
     highway = (station *) calloc(highway_len, sizeof(station));
 
-    while ((read = getline(&line, &len, file_input)) != -1) {
+    int old_len = 0;
+    int j = 0;
+    int first_node = 0;
+    int end_node = 0;
+    int max_dist = 0;
+    int *path = NULL;
+    int len_path = 0;
+
+    while ((line_read = getline(&line, &line_len, file_input)) != -1) {
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
             if (n_stations > highway_len/3*2) {
@@ -297,8 +321,8 @@ int main (int argc, char *argv[])
                 fprintf(file_output, "non rottamata\n");
             }
             else {
-                int old_len = (highway + index)->len_cars;
-                int j = 0;
+                old_len = (highway + index)->len_cars;
+                j = 0;
                 len_cars = old_len;
                 car = (int)strtol(strtok(NULL, " "), NULL, 10);
                 if (car_found(highway, index, car) == 1) {
@@ -325,9 +349,9 @@ int main (int argc, char *argv[])
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
             arrival = (int)strtol(strtok(NULL, " "), NULL, 10);
-            int first_node = 0;
-            int end_node = 0;
-            int max_dist = 0;
+            first_node = 0;
+            end_node = 0;
+            max_dist = 0;
             if (distance < arrival) {
                 first_node = distance;
                 end_node = arrival;
@@ -377,8 +401,8 @@ int main (int argc, char *argv[])
                     qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
                     qsort((highway + i)->left_queue, (highway + i)->len_lqueue, sizeof(int), compare);
                 }
-                int *path = (int *) calloc(n_stations, sizeof(int));
-                int len_path = 0;
+                path = (int *) calloc(n_stations, sizeof(int));
+                len_path = 0;
                 len_path = shortest_path(highway, highway_len, distance, arrival, path);
                 if (len_path > 0) {
                     if (distance < arrival) {
@@ -397,6 +421,7 @@ int main (int argc, char *argv[])
                 else {
                     fprintf(file_output, "nessun percorso\n");
                 }
+                free(path);
             }
         }
     }
