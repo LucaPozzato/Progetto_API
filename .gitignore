@@ -1,0 +1,11 @@
+.vscode/launch.json
+.vscode/tasks.json
+Sviluppo/.DS_Store
+.env
+.DS_Store
+progetto.dSYM
+test.dSYM
+Sviluppo/output.txt
+Sviluppo/results.txt
+Sviluppo/API_progetto
+Sviluppo/progetto
