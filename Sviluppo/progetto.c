@@ -46,11 +46,10 @@ int in_highway (station *highway, int highway_len, int key) {
     return -1;
 }
 
-station *re_hash (station *highway, int *highway_len) {
+int re_hash (station *highway, station *new_highway,int *highway_len) {
     int new_len = *highway_len * 2;
-    station *new_highway = (station *) calloc(new_len, sizeof(station));
     int new_index = 0;
-    station *curr_station;
+    station *curr_station = NULL;
     for (int i = 0; i < *highway_len; i++) {
         curr_station = highway + i;
         if (curr_station->id != 0 && curr_station->id != -1) {
@@ -64,9 +63,8 @@ station *re_hash (station *highway, int *highway_len) {
             (new_highway + new_index)->len_lqueue = curr_station->len_lqueue;
         }
     }
-    free(highway);
     *highway_len = *highway_len * 2;
-    return new_highway;
+    return 1;
 }
 
 int car_found (station *highway, int index, int car) {
@@ -132,28 +130,22 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
 
     len_paths++;
     paths = (list_path *) calloc(len_paths, sizeof(list_path));
-    paths->len_path++;
-    paths->path = (int *) calloc(paths->len_path, sizeof(int));
+    (paths + 0)->len_path++;
+    (paths + 0)->path = (int *) calloc(paths->len_path, sizeof(int));
     paths->path[0] = first_node;
     len_previous_stations++;
     previous_stations = (int *) calloc(len_previous_stations, sizeof(int));
     previous_stations[0] = end_node;
 
-    int *path_curr = NULL;
-    int len_path_curr = 0;
     int last_station = 0;
     int *next_stations = NULL;
     int len_next_stations = 0;
     
     int index;
     int next_station = 0;
-    int* path_new = NULL;
-    int len_path_new = 0;
 
     while (index_path < len_paths) {
-        path_curr = (paths + index_path)->path;
-        len_path_curr = (paths + index_path)->len_path;
-        last_station = path_curr[len_path_curr - 1];
+        last_station = (paths + index_path)->path[(paths + index_path)->len_path - 1];
         index = in_highway(highway, highway_len, last_station);
         if (distance < arrival) {
             next_stations = (highway + index)->right_queue;
@@ -164,35 +156,43 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
             len_next_stations = (highway + index)->len_lqueue;
         }
         if (in_array(next_stations, len_next_stations, end_node) == 1) {
-            len_path_curr++;
-            path_curr = (int *) realloc(path_curr, len_path_curr * sizeof(int));
-            path_curr[len_path_curr - 1] = end_node;
-            for (int i = 0; i < len_path_curr; i++) {
-                path[i] = path_curr[i];
+            (paths + index_path)->len_path++;
+            (paths + index_path)->path = (int *) realloc((paths + index_path)->path, (paths + index_path)->len_path * sizeof(int));
+            (paths + index_path)->path[(paths + index_path)->len_path - 1] = end_node;
+            for (int i = 0; i < (paths + index_path)->len_path; i++) {
+                path[i] = (paths + index_path)->path[i];
             }
-            return len_path_curr;
+            int len_path = (paths + index_path)->len_path;
+            for (int i = 0; i < len_paths; i++) {
+                free((paths + i)->path);
+            }
+            free(paths);
+            free(previous_stations);
+            return len_path;
         }
         for (int i = 0; i < len_next_stations; i++) {
             next_station = next_stations[i];
             if (in_array(previous_stations, len_previous_stations, next_station) == 0) {
-                len_path_new = 0;
                 len_previous_stations++;
-                previous_stations = (int *) realloc(previous_stations, len_previous_stations * sizeof(int));  
+                previous_stations = (int *) realloc(previous_stations, len_previous_stations * sizeof(int));
                 previous_stations[len_previous_stations - 1] = next_station;
-                path_new = (int *) calloc(len_path_curr + 1, sizeof(int));
-                for (int i = 0; i < len_path_curr; i++) {
-                    path_new[i] = path_curr[i];
-                }
-                path_new[len_path_curr] = next_station;
-                len_path_new = len_path_curr + 1;
                 len_paths++;
                 paths = (list_path *) realloc(paths, len_paths * sizeof(list_path));
-                (paths + (len_paths - 1))->path = path_new;
-                (paths + (len_paths - 1))->len_path = len_path_new;
+                (paths + (len_paths - 1))->path = (int *) calloc((paths + index_path)->len_path + 1, sizeof(int));
+                for (int i = 0; i < (paths + index_path)->len_path; i++) {
+                    (paths + (len_paths - 1))->path[i] = (paths + index_path)->path[i];
+                }
+                (paths + (len_paths - 1))->path[(paths + index_path)->len_path] = next_station;
+                (paths + (len_paths - 1))->len_path = (paths + index_path)->len_path + 1;
             }
         }
         index_path++;
     }
+    for (int i = 0; i < len_paths; i++) {
+        free((paths + i)->path);
+    }
+    free(paths);
+    free(previous_stations);
     return 0;
 }
 
@@ -241,7 +241,11 @@ int main (int argc, char *argv[])
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
             if (n_stations > highway_len/3*2) {
-                highway = re_hash(highway, &highway_len);
+                station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
+                re_hash(highway, new_highway, &highway_len);
+                free(highway);
+                highway = new_highway;
+                new_highway = NULL;
             }
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
@@ -263,7 +267,7 @@ int main (int argc, char *argv[])
             }
             
         }
-        if (strcmp(command, "demolisci-stazione") == 0) {
+        else if (strcmp(command, "demolisci-stazione") == 0) {
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
             index = in_highway (highway, highway_len, distance);
@@ -285,7 +289,7 @@ int main (int argc, char *argv[])
                 fprintf(file_output, "non demolita\n");
             }
         }
-        if (strcmp(command, "aggiungi-auto") == 0) {
+        else if (strcmp(command, "aggiungi-auto") == 0) {
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
             index = in_highway(highway, highway_len, distance);
@@ -301,7 +305,7 @@ int main (int argc, char *argv[])
                 fprintf(file_output, "aggiunta\n");
             }
         }
-        if (strcmp(command, "rottama-auto") == 0) {
+        else if (strcmp(command, "rottama-auto") == 0) {
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
             index = in_highway(highway, highway_len, distance);
@@ -333,7 +337,7 @@ int main (int argc, char *argv[])
                 }
             }
         }
-        if (strcmp(command, "pianifica-percorso") == 0) {
+        else if (strcmp(command, "pianifica-percorso") == 0) {
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
             arrival = (int)strtol(strtok(NULL, " "), NULL, 10);
@@ -412,16 +416,23 @@ int main (int argc, char *argv[])
                 free(path);
             }
         }
+        else {
+            return 0;
+        }
     }
-
+    for (int i = 0; i < highway_len; i++) {
+        free((highway + i)->cars);
+        free((highway + i)->right_queue);
+        free((highway + i)->left_queue);
+    }
+    free(highway);
     fclose(file_input);
     fclose(file_output);
     if (line)
         free(line);
-    exit(EXIT_SUCCESS);
+    return 0;
 }
 
 // la stazione può essere a distanza zero --> DA AGGIUSTARE
-// cambiare nomi variabili per BFS (shortest path algorythm)
 // sistemare free e vedere se ci sono delle memory leak
 // try to use VLA (variable-length arrays)
