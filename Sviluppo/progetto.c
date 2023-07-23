@@ -173,9 +173,6 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
             for (int i = 0; i < len_paths; i++) {
                 free((paths + i)->path);
             }
-            free(previous_stations);
-            free(paths);
-            free(path_curr);
             return len_path_curr;
         }
         for (int i = 0; i < len_next_stations; i++) {
@@ -202,9 +199,6 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
     for (int i = 0; i < len_paths; i++) {
         free((paths + i)->path);
     }
-    free(previous_stations);
-    free(paths);
-    free(path_curr);
     return 0;
 }
 
