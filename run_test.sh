@@ -3,7 +3,7 @@
 rm results_test.txt
 gcc -Wall -Werror -std=gnu11 -O2 -lm Sviluppo/progetto.c -o Sviluppo/progetto
 
-for i in {1..111}
+for i in {1..100}
 do
     echo test number: $i >>results_test.txt
     /usr/bin/time -h ./Sviluppo/progetto Test/archivio_test_aperti/open_$i.txt >>results_test.txt 2>&1

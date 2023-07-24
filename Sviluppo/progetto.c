@@ -25,7 +25,7 @@ int get_index (int key, int highway_len, station* highway) {
     int index = floor(highway_len*(hash_const*key-floor(hash_const*key)));
     int nxt_index = index;
     int i = 1;
-    while ((highway + nxt_index)->id != 0 && (highway + nxt_index)->id != -1) {
+    while ((highway + nxt_index)->id != -2 && (highway + nxt_index)->id != -1) {
         nxt_index = (index + (int)((1/((double)2))*i + (1/((double)2))*(i*i)))%highway_len;
         i++;
     }
@@ -36,7 +36,7 @@ int in_highway (station *highway, int highway_len, int key) {
     int index = floor(highway_len*(hash_const*key-floor(hash_const*key)));
     int nxt_index = index;
     int i = 1;
-    while ((highway + nxt_index)->id != 0) {
+    while ((highway + nxt_index)->id != -1) {
         if ((highway + nxt_index)->id == key) {
             return nxt_index;
         }
@@ -52,7 +52,7 @@ int re_hash (station *highway, station *new_highway,int *highway_len) {
     station *curr_station = NULL;
     for (int i = 0; i < *highway_len; i++) {
         curr_station = highway + i;
-        if (curr_station->id != 0 && curr_station->id != -1) {
+        if (curr_station->id != -2 && curr_station->id != -1) {
             new_index = get_index(curr_station->id, new_len, new_highway);
             (new_highway + new_index)->id = curr_station->id;
             (new_highway + new_index)->cars = curr_station->cars;
@@ -196,6 +196,13 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
     return 0;
 }
 
+int initialize_highway (station *highway, int highway_len) {
+    for (int i = 0; i < highway_len; i++) {
+        (highway + i)->id = -1;
+    }
+    return 1;
+}
+
 int main (int argc, char *argv[])
 {
     char *line = NULL;
@@ -204,8 +211,8 @@ int main (int argc, char *argv[])
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
-    file_input = fopen(argv[1], "r");
-    // file_input = fopen("Test/archivio_test_aperti/open_50.txt", "r");
+    // file_input = fopen(argv[1], "r");
+    file_input = fopen("Test/archivio_test_aperti/open_50.txt", "r");
     if (file_input == NULL) {
         perror("Error opening input file");
         return(0);
@@ -228,6 +235,7 @@ int main (int argc, char *argv[])
     int *curr_ptr = NULL;
     station* highway = NULL;
     highway = (station *) calloc(highway_len, sizeof(station));
+    initialize_highway(highway, highway_len);
 
     int old_len = 0;
     int j = 0;
@@ -242,6 +250,7 @@ int main (int argc, char *argv[])
         if (strcmp(command, "aggiungi-stazione") == 0) {
             if (n_stations > highway_len/3*2) {
                 station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
+                initialize_highway(new_highway, highway_len * 2);
                 re_hash(highway, new_highway, &highway_len);
                 free(highway);
                 highway = new_highway;
@@ -272,7 +281,7 @@ int main (int argc, char *argv[])
             distance = (int)strtol(distance_c, NULL, 10);
             index = in_highway (highway, highway_len, distance);
             if (index != -1) {
-                (highway + index)->id = -1;
+                (highway + index)->id = -2;
                 free((highway + index)->cars);
                 (highway + index)->cars = NULL; // per evitare errore con double free
                 (highway + index)->len_cars = 0;
@@ -357,7 +366,7 @@ int main (int argc, char *argv[])
             }
             else {
                 for (int i = 0; i < highway_len; i++) {
-                    if ((highway + i)->id != 0 && (highway + i)->id != -1) {
+                    if ((highway + i)->id != -2 && (highway + i)->id != -1) {
                         free((highway + i)->right_queue);
                         (highway + i)->right_queue = NULL; // per evitare errore double free
                         free((highway + i)->left_queue);
@@ -371,7 +380,7 @@ int main (int argc, char *argv[])
                     if (len_cars > 0) {
                         max_dist = max_car(highway, i);
                         for (int j = 0; j < highway_len; j++) {
-                            if ((highway + j)->id != 0 && (highway + j)->id != -1) {
+                            if ((highway + j)->id != -2 && (highway + j)->id != -1) {
                                 if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
                                     // si può utilizzare calloc e poi ingrandirla al bisogno
                                     (highway + i)->len_rqueue++;
@@ -432,7 +441,3 @@ int main (int argc, char *argv[])
         free(line);
     return 0;
 }
-
-// la stazione può essere a distanza zero --> DA AGGIUSTARE
-// sistemare free e vedere se ci sono delle memory leak
-// try to use VLA (variable-length arrays)
