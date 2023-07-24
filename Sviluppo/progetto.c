@@ -211,8 +211,7 @@ int main (int argc, char *argv[])
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
-    // file_input = fopen(argv[1], "r");
-    file_input = fopen("Test/archivio_test_aperti/open_50.txt", "r");
+    file_input = fopen(argv[1], "r");
     if (file_input == NULL) {
         perror("Error opening input file");
         return(0);
