@@ -5,6 +5,7 @@ Sviluppo/.DS_Store
 .DS_Store
 progetto.dSYM
 test.dSYM
+Sviluppo/test
 Sviluppo/output.txt
 Sviluppo/results.txt
 Sviluppo/API_progetto
@@ -12,4 +13,3 @@ Sviluppo/progetto
 Sviluppo/results_test.txt
 results_test.txt
 valgrind.txt
-Sviluppo/test
