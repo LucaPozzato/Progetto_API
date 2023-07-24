@@ -247,7 +247,7 @@ int main (int argc, char *argv[])
     while ((line_read = getline(&line, &line_len, file_input)) != -1) {
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
-            if (n_stations > highway_len/3*2) {
+            if (n_stations > highway_len/4*3) {
                 station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
                 initialize_highway(new_highway, highway_len * 2);
                 re_hash(highway, new_highway, &highway_len);
@@ -440,3 +440,6 @@ int main (int argc, char *argv[])
         free(line);
     return 0;
 }
+
+// ./test_gen_2023_macos -s 3000 -c 20 -C 100 -r 30
+// Test/test_gen_2023/test_gen_2023_macos -s 5000 -c 20 -C 200 -r 30 > Test/archivio_test_aperti/open_200.txt

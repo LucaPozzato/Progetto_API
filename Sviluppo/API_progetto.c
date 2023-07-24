@@ -234,7 +234,7 @@ int main (int argc, char *argv[])
     while ((line_read = getline(&line, &line_len, stdin)) != -1) {
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
-            if (n_stations > highway_len/3*2) {
+            if (n_stations > highway_len/4*3) {
                 station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
                 initialize_highway(new_highway, highway_len * 2);
                 re_hash(highway, new_highway, &highway_len);

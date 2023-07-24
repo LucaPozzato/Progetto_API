@@ -1,8 +1,7 @@
 import sys
 
-# file = open(sys.argv[1], "r")
-file = open("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_50.txt", "r")
-output = open("output.txt", "w")
+file = open(sys.argv[1], "r")
+output = open("Sviluppo/output.txt", "w")
 lines = file.readlines()
 
 highway = {}
@@ -12,22 +11,10 @@ for i in lines:
         if int(commands[1]) in highway:
             output.write("non aggiunta\n")            
         else:
-            # cars = [0]*int(commands[2])
-            # for j in range(int(commands[2])):
-            #     cars[j] = int(commands[j+3])
-            # cars.sort()
             highway[int(commands[1])] = {}
             highway[int(commands[1])]["cars"] = [int(commands[j+3]) for j in range(int(commands[2]))]
             highway[int(commands[1])]["stations_dx"] = [] 
             highway[int(commands[1])]["stations_sx"] = [] 
-            # len_cars = len(highway[int(commands[1])]["cars"])
-            # if len_cars > 0:
-            #     car_max = highway[int(commands[1])]["cars"][len_cars-1]
-            # # calcola grafo
-            # max_distance = int(commands[1]) + car_max
-            # for station in highway:
-            #     if station <= max_distance and station > int(commands[1]):
-            #         highway[int(commands[1])]["stations"].append(station)
             output.write("aggiunta\n")
     if(commands[0] == "demolisci-stazione"):
         if int(commands[1]) in highway:
@@ -37,40 +24,14 @@ for i in lines:
             output.write("non demolita\n")
     if(commands[0] == "aggiungi-auto"):
         if int(commands[1]) in highway:
-            # len_cars = len(highway[int(commands[1])]["cars"])
-            # if len_cars > 0:
-            #     car_max = highway[int(commands[1])]["cars"][len_cars-1] 
             highway[int(commands[1])]["cars"].append(int(commands[2]))
-            # highway[int(commands[1])]["cars"].sort()
             output.write("aggiunta\n")
-            # se macchina nuova < macchina max niente altrimeni ric grafo
-            # if int(commands[2]) <= car_max:
-            #     pass
-            # else:
-            #     highway[int(commands[1])]["stations"] = []
-            #     for station in highway:
-            #         if station <= (int(commands[1])+int(commands[2])) and station > int(commands[1]):
-            #             highway[int(commands[1])]["stations"].append(station) 
-            #     # ricalcola grafo
         else:
             output.write("non aggiunta\n")
     if(commands[0] == "rottama-auto"):
         if int(commands[1]) in highway and int(commands[2]) in highway[int(commands[1])]["cars"]: 
-            # len_cars = len(highway[int(commands[1])]["cars"])
-            # car_max = highway[int(commands[1])]["cars"][len_cars-1] 
             highway[int(commands[1])]["cars"].remove(int(commands[2]))
             output.write("rottamata\n")
-            # # se macchina rottamata = macchina max ric grafo
-            # if int(commands[2]) == car_max:
-            #     len_cars = len(highway[int(commands[1])]["cars"])
-            #     car_max = highway[int(commands[1])]["cars"][len_cars-1] 
-            #     highway[int(commands[1])]["stations"] = []
-            #     for station in highway:
-            #         if station <= (int(commands[1])+car_max) and station > int(commands[1]):
-            #             highway[int(commands[1])]["stations"].append(station) 
-            #     # ricalcola grafo
-            # else:
-            #     pass
         else:
             output.write("non rottamata\n")
     if(commands[0] == "pianifica-percorso"):
@@ -129,19 +90,6 @@ for i in lines:
             path_index = path_index + 1
 
         if len(paths) > 0:
-            # best_path = paths[0]
-            # flag = 0
-            # if int(commands[1]) > int(commands[2]):
-            #     for i in range(len(paths[0])-1, 0, -1):
-            #         current_station = paths[0][i]
-            #         for path in paths:
-            #             if len(path) <= len(paths[0]):
-            #                 if path[i] < current_station:
-            #                     current_station = path[i]
-            #                     best_path = path
-            #                     flag = 1
-            #         if flag == 1:
-            #             break
             string = ""
             if int(commands[1]) < int(commands[2]):
                 for i in paths[0]:
@@ -154,8 +102,5 @@ for i in lines:
         else:
             output.write("nessun percorso\n")
 
-    # highway = dict(sorted(highway.items())) # non necessario
-
-# print(json.dumps(highway))
 file.close()
 output.close()
