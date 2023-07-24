@@ -1,14 +1,14 @@
 #!/bin/bash
 
 mkdir -p Output
+./build.sh
 
-INPUT=open_50
 if [ $# -eq 1 ]
 then
     INPUT=$1
 fi
 
-/usr/bin/time -o Output/${INPUT}.time Sviluppo/progetto Test/archivio_test_aperti/${INPUT}.txt
+/usr/bin/time -o Output/${INPUT}.time Sviluppo/file_ver Test/archivio_test_aperti/${INPUT}.txt
 echo
 
 diff -u Test/archivio_test_aperti/${INPUT}.output.txt Sviluppo/output.txt
@@ -17,11 +17,12 @@ diff -u Test/archivio_test_aperti/${INPUT}.output.txt Sviluppo/output.txt
 if [ $? -eq 0 ]
 then
     OUTPUT=${INPUT}.ok
-    echo SUCCESS
+    echo "    SUCCESS    "
+    echo
 else
     OUTPUT=${INPUT}.ko
+    echo "*** FAILURE ***"
     echo
-    echo "  *** FAILURE ***"
 fi
 
 mv Sviluppo/output.txt "Output/${OUTPUT}"

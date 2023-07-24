@@ -13,3 +13,6 @@ Sviluppo/progetto
 Sviluppo/results_test.txt
 results_test.txt
 valgrind.txt
+Sviluppo/file_ver
+Output/
+callgrind.out.*
