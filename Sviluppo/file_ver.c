@@ -19,6 +19,7 @@ typedef struct list_path
 {
     int *path;
     int len_path;
+    int path_index;
 } list_path;
 
 int get_index (int key, int highway_len, station* highway);
@@ -431,17 +432,21 @@ int recalc_station (station *highway, int highway_len, int first_node, int end_n
                 max_dist = max_car(highway, i);
                 for (int j = 0; j < highway_len; j++) {
                     if ((highway + j)->id >= first_node && (highway + j)->id <= end_node) {
-                        if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
-                            // si può utilizzare calloc e poi ingrandirla al bisogno
-                            (highway + i)->len_rqueue++;
-                            (highway + i)->right_queue = (int *) realloc((highway + i)->right_queue, ((highway + i)->len_rqueue) * sizeof(int));
-                            (highway + i)->right_queue[((highway + i)->len_rqueue)-1] = (highway + j)->id;
+                        if (first_node < end_node ) {
+                            if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
+                                // si può utilizzare calloc e poi ingrandirla al bisogno
+                                (highway + i)->len_rqueue++;
+                                (highway + i)->right_queue = (int *) realloc((highway + i)->right_queue, ((highway + i)->len_rqueue) * sizeof(int));
+                                (highway + i)->right_queue[((highway + i)->len_rqueue)-1] = (highway + j)->id;
+                            }
                         }
-                        else if ((highway + j)->id >= (highway + i)->id - max_dist && (highway + j)->id < (highway + i)->id) {
-                            // si può utilizzare calloc e poi ingrandirla al bisogno
-                            (highway + j)->len_lqueue++;
-                            (highway + j)->left_queue = (int *) realloc((highway + j)->left_queue, ((highway + j)->len_lqueue) * sizeof(int));
-                            (highway + j)->left_queue[((highway + j)->len_lqueue)-1] = (highway + i)->id;
+                        else {
+                            if ((highway + j)->id >= (highway + i)->id - max_dist && (highway + j)->id < (highway + i)->id) {
+                                // si può utilizzare calloc e poi ingrandirla al bisogno
+                                (highway + j)->len_lqueue++;
+                                (highway + j)->left_queue = (int *) realloc((highway + j)->left_queue, ((highway + j)->len_lqueue) * sizeof(int));
+                                (highway + j)->left_queue[((highway + j)->len_lqueue)-1] = (highway + i)->id;
+                            }
                         }
                         // si può ottimizzare che stazione è già contenuta in right or left queue, e in caso aggiungerla
                         // a seconda di dove andare si può ricalcolare grafo solo da un lato
@@ -452,8 +457,12 @@ int recalc_station (station *highway, int highway_len, int first_node, int end_n
     }
     for (int i = 0; i < highway_len; i++) {
         if ((highway + i)->id >= first_node && (highway + i)->id <= end_node) {
-            qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
-            qsort((highway + i)->left_queue, (highway + i)->len_lqueue, sizeof(int), compare);
+            if (first_node < end_node) {
+                qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
+            }
+            else {
+                qsort((highway + i)->left_queue, (highway + i)->len_lqueue, sizeof(int), compare);
+            }
         }
     }
     return 1;
