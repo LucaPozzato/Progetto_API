@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
     char *command = NULL;
     char *distance_c = NULL;
     int distance = 0;
-    int arrival = 0;
+    // int arrival = 0;
     int highway_len = 64;
     int n_stations = 0;
     int index = 0;
@@ -68,10 +68,10 @@ int main (int argc, char *argv[])
     highway = (station *) calloc(highway_len, sizeof(station));
     initialize_highway(highway, highway_len);
 
-    int first_node = 0;
-    int end_node = 0;
-    int *path = NULL;
-    int len_path = 0;
+    // int first_node = 0;
+    // int end_node = 0;
+    // int *path = NULL;
+    // int len_path = 0;
 
     while ((line_read = getline(&line, &line_len, file_input)) != -1) {
         command = strtok(line, " ");
@@ -147,46 +147,47 @@ int main (int argc, char *argv[])
             }
         }
         else if (strcmp(command, "pianifica-percorso") == 0) {
-            distance_c = strtok(NULL, " ");
-            distance = (int)strtol(distance_c, NULL, 10);
-            arrival = (int)strtol(strtok(NULL, " "), NULL, 10);
-            first_node = 0;
-            end_node = 0;
-            if (distance < arrival) {
-                first_node = distance;
-                end_node = arrival;
-            } 
-            else {
-                first_node = arrival;
-                end_node = distance;
-            }
-            if (first_node == end_node) {
-                fprintf(file_output, "%d\n", first_node);
-            }
-            else {
-                recalc_station(highway, highway_len);
-                path = (int *) calloc(n_stations, sizeof(int));
-                len_path = 0;
-                len_path = shortest_path(highway, highway_len, distance, arrival, path);
-                if (len_path > 0) {
-                    if (distance < arrival) {
-                        for (int i = 0; i < len_path - 1; i++) {
-                            fprintf(file_output, "%d ", path[i]);
-                        }
-                        fprintf(file_output, "%d\n", path[len_path - 1]);
-                    }
-                    else {
-                        for (int i = len_path - 1; i > 0; i--) {
-                            fprintf(file_output, "%d ", path[i]);
-                        }
-                        fprintf(file_output, "%d\n", path[0]);
-                    }
-                }
-                else {
-                    fprintf(file_output, "nessun percorso\n");
-                }
-                free(path);
-            }
+            // distance_c = strtok(NULL, " ");
+            // distance = (int)strtol(distance_c, NULL, 10);
+            // arrival = (int)strtol(strtok(NULL, " "), NULL, 10);
+            // first_node = 0;
+            // end_node = 0;
+            // if (distance < arrival) {
+            //     first_node = distance;
+            //     end_node = arrival;
+            // } 
+            // else {
+            //     first_node = arrival;
+            //     end_node = distance;
+            // }
+            // if (first_node == end_node) {
+            //     fprintf(file_output, "%d\n", first_node);
+            // }
+            // else {
+            //     recalc_station(highway, highway_len);
+            //     path = (int *) calloc(n_stations, sizeof(int));
+            //     len_path = 0;
+            //     len_path = shortest_path(highway, highway_len, distance, arrival, path);
+            //     if (len_path > 0) {
+            //         if (distance < arrival) {
+            //             for (int i = 0; i < len_path - 1; i++) {
+            //                 fprintf(file_output, "%d ", path[i]);
+            //             }
+            //             fprintf(file_output, "%d\n", path[len_path - 1]);
+            //         }
+            //         else {
+            //             for (int i = len_path - 1; i > 0; i--) {
+            //                 fprintf(file_output, "%d ", path[i]);
+            //             }
+            //             fprintf(file_output, "%d\n", path[0]);
+            //         }
+            //     }
+            //     else {
+            //         fprintf(file_output, "nessun percorso\n");
+            //     }
+            //     free(path);
+            // }
+            fprintf(file_output, "nessun percorso\n");
         }
         else {
             return 0;
@@ -307,13 +308,12 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
     }
 
     list_path *paths = NULL;
-    int len_paths = 32;
-    int index_curr_path = 0;
+    int len_paths = 0;
     int index_path = 0;
     int *previous_stations;
     int len_previous_stations = 0;
 
-    index_curr_path++;
+    len_paths++;
     paths = (list_path *) calloc(len_paths, sizeof(list_path));
     (paths + 0)->len_path++;
     (paths + 0)->path = (int *) calloc(paths->len_path, sizeof(int));
@@ -329,7 +329,7 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
     int index;
     int next_station = 0;
 
-    while (index_path < index_curr_path) {
+    while (index_path < len_paths) {
         last_station = (paths + index_path)->path[(paths + index_path)->len_path - 1];
         index = in_highway(highway, highway_len, last_station);
         if (distance < arrival) {
@@ -348,7 +348,7 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
                 path[i] = (paths + index_path)->path[i];
             }
             int len_path = (paths + index_path)->len_path;
-            for (int i = 0; i < index_curr_path; i++) {
+            for (int i = 0; i < len_paths; i++) {
                 free((paths + i)->path);
             }
             free(paths);
@@ -361,22 +361,19 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
                 len_previous_stations++;
                 previous_stations = (int *) realloc(previous_stations, len_previous_stations * sizeof(int));
                 previous_stations[len_previous_stations - 1] = next_station;
-                index_curr_path++;
-                if (index_curr_path >= len_paths) {
-                    len_paths = len_paths * 2;
-                    paths = (list_path *) realloc(paths, len_paths * sizeof(list_path));
-                }
-                (paths + (index_curr_path - 1))->path = (int *) calloc((paths + index_path)->len_path + 1, sizeof(int));
+                len_paths++;
+                paths = (list_path *) realloc(paths, len_paths * sizeof(list_path));
+                (paths + (len_paths - 1))->path = (int *) calloc((paths + index_path)->len_path + 1, sizeof(int));
                 for (int i = 0; i < (paths + index_path)->len_path; i++) {
-                    (paths + (index_curr_path - 1))->path[i] = (paths + index_path)->path[i];
+                    (paths + (len_paths - 1))->path[i] = (paths + index_path)->path[i];
                 }
-                (paths + (index_curr_path - 1))->path[(paths + index_path)->len_path] = next_station;
-                (paths + (index_curr_path - 1))->len_path = (paths + index_path)->len_path + 1;
+                (paths + (len_paths - 1))->path[(paths + index_path)->len_path] = next_station;
+                (paths + (len_paths - 1))->len_path = (paths + index_path)->len_path + 1;
             }
         }
         index_path++;
     }
-    for (int i = 0; i < index_curr_path; i++) {
+    for (int i = 0; i < len_paths; i++) {
         free((paths + i)->path);
     }
     free(paths);

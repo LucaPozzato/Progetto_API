@@ -5,8 +5,9 @@ int main ()
 {
     char i = 0;
     do {
-        i = getchar();
-        putchar(i);
+        scanf("%c", &i);
+        printf("%c", i);
     }
     while (i != 'a');
+    printf("\n");
 }

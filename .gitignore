@@ -16,3 +16,8 @@ valgrind.txt
 Sviluppo/file_ver
 Output/
 callgrind.out.*
+Sviluppo/verifier_ver
+Sviluppo/generic_test
+massif.out.*
+Sviluppo/file_ver.dSYM/
+Sviluppo/parser

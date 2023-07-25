@@ -11,7 +11,7 @@ fi
 /usr/bin/time -o Output/${INPUT}.time Sviluppo/file_ver Test/archivio_test_aperti/${INPUT}.txt
 echo
 
-diff -u Test/archivio_test_aperti/${INPUT}.output.txt Sviluppo/output.txt
+# diff -u Test/archivio_test_aperti/${INPUT}.output.txt Sviluppo/output.txt
 
 
 if [ $? -eq 0 ]

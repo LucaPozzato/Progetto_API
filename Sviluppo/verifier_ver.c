@@ -21,6 +21,175 @@ typedef struct list_path
     int len_path;
 } list_path;
 
+int get_index (int key, int highway_len, station* highway);
+int in_highway (station *highway, int highway_len, int key);
+int re_hash (station *highway, station *new_highway,int *highway_len);
+int car_found (station *highway, int index, int car);
+int max_car (station *highway, int index);
+int compare (const void *elem1, const void *elem2);
+int in_array (int *array, int len, int elem);
+int shortest_path(station *highway, int highway_len, int distance, int arrival, int *path);
+int initialize_highway (station *highway, int highway_len);
+int delete_station(station *highway, int index);
+int recalc_station (station *highway, int highway_len);
+int add_car (station *highway, int highway_len, int car, int index);
+int remove_car (station *highway, int *curr_ptr, int car, int index);
+
+int main (int argc, char *argv[])
+{
+    char *line = NULL;
+    size_t line_len = 0;
+    ssize_t line_read;
+
+    char *command = NULL;
+    char *distance_c = NULL;
+    int distance = 0;
+    int arrival = 0;
+    int highway_len = 64;
+    int n_stations = 0;
+    int index = 0;
+    int len_cars = 0;
+    int car = 0;
+    int *curr_ptr = NULL;
+    station* highway = NULL;
+    highway = (station *) calloc(highway_len, sizeof(station));
+    initialize_highway(highway, highway_len);
+
+    int first_node = 0;
+    int end_node = 0;
+    int *path = NULL;
+    int len_path = 0;
+
+    while ((line_read = getline(&line, &line_len, stdin)) != -1) {
+        command = strtok(line, " ");
+        if (strcmp(command, "aggiungi-stazione") == 0) {
+            if (n_stations > highway_len/4*3) {
+                station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
+                initialize_highway(new_highway, highway_len * 2);
+                re_hash(highway, new_highway, &highway_len);
+                free(highway);
+                highway = new_highway;
+                new_highway = NULL;
+            }
+            distance_c = strtok(NULL, " ");
+            distance = (int)strtol(distance_c, NULL, 10);
+            if (in_highway (highway, highway_len, distance) != -1) {
+                printf("non aggiunta\n");
+            }
+            else {
+                index = get_index(distance, highway_len, highway);
+                (highway + index)->id = distance;
+                len_cars = (int)strtol(strtok(NULL, " "), NULL, 10);
+                (highway + index)->cars = (int *) calloc(len_cars, sizeof(int));
+                (highway + index)->len_cars = len_cars;
+                curr_ptr = (highway + index)->cars;
+                for (int i = 0; i < len_cars; i++) {
+                    (highway + index)->cars[i] = (int)strtol(strtok(NULL, " "), NULL, 10); 
+                }
+                n_stations++;
+                printf("aggiunta\n");
+            }
+            
+        }
+        else if (strcmp(command, "demolisci-stazione") == 0) {
+            distance_c = strtok(NULL, " ");
+            distance = (int)strtol(distance_c, NULL, 10);
+            index = in_highway (highway, highway_len, distance);
+            if (delete_station(highway, index)) {
+                printf("demolita\n");
+                n_stations--;
+            }
+            else {
+                printf("non demolita\n");
+            }
+        }
+        else if (strcmp(command, "aggiungi-auto") == 0) {
+            distance_c = strtok(NULL, " ");
+            distance = (int)strtol(distance_c, NULL, 10);
+            index = in_highway(highway, highway_len, distance);
+            car = (int)strtol(strtok(NULL, " "), NULL, 10);
+            if (index == -1) {
+                printf("non aggiunta\n");
+            }
+            else {
+                add_car(highway, highway_len, car, index);
+                printf("aggiunta\n");
+            }
+        }
+        else if (strcmp(command, "rottama-auto") == 0) {
+            distance_c = strtok(NULL, " ");
+            distance = (int)strtol(distance_c, NULL, 10);
+            index = in_highway(highway, highway_len, distance);
+            car = (int)strtol(strtok(NULL, " "), NULL, 10);
+            if (index == -1) {
+                printf("non rottamata\n");
+            }
+            else {
+                if (remove_car(highway, curr_ptr, car, index)) {
+                    printf("rottamata\n");
+                }
+                else {
+                    printf("non rottamata\n");
+                }
+            }
+        }
+        else if (strcmp(command, "pianifica-percorso") == 0) {
+            distance_c = strtok(NULL, " ");
+            distance = (int)strtol(distance_c, NULL, 10);
+            arrival = (int)strtol(strtok(NULL, " "), NULL, 10);
+            first_node = 0;
+            end_node = 0;
+            if (distance < arrival) {
+                first_node = distance;
+                end_node = arrival;
+            } 
+            else {
+                first_node = arrival;
+                end_node = distance;
+            }
+            if (first_node == end_node) {
+                printf("%d\n", first_node);
+            }
+            else {
+                recalc_station(highway, highway_len);
+                path = (int *) calloc(n_stations, sizeof(int));
+                len_path = 0;
+                len_path = shortest_path(highway, highway_len, distance, arrival, path);
+                if (len_path > 0) {
+                    if (distance < arrival) {
+                        for (int i = 0; i < len_path - 1; i++) {
+                            printf("%d ", path[i]);
+                        }
+                        printf("%d\n", path[len_path - 1]);
+                    }
+                    else {
+                        for (int i = len_path - 1; i > 0; i--) {
+                            printf("%d ", path[i]);
+                        }
+                        printf("%d\n", path[0]);
+                    }
+                }
+                else {
+                    printf("nessun percorso\n");
+                }
+                free(path);
+            }
+        }
+        else {
+            return 0;
+        }
+    }
+    for (int i = 0; i < highway_len; i++) {
+        free((highway + i)->cars);
+        free((highway + i)->right_queue);
+        free((highway + i)->left_queue);
+    }
+    free(highway);
+    if (line)
+        free(line);
+    return 0;
+}
+
 int get_index (int key, int highway_len, station* highway) {
     int index = floor(highway_len*(hash_const*key-floor(hash_const*key)));
     int nxt_index = index;
@@ -110,7 +279,7 @@ int in_array (int *array, int len, int elem) {
     return 0;
 }
 
-int shortest_path(station *highway, int highway_len, int distance, int arrival, int *path) {
+int shortest_path (station *highway, int highway_len, int distance, int arrival, int *path) {
     int first_node = 0;
     int end_node = 0;
     if (distance < arrival) {
@@ -123,12 +292,13 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
     }
 
     list_path *paths = NULL;
-    int len_paths = 0;
+    int len_paths = 32;
+    int index_curr_path = 0;
     int index_path = 0;
     int *previous_stations;
     int len_previous_stations = 0;
 
-    len_paths++;
+    index_curr_path = 1;
     paths = (list_path *) calloc(len_paths, sizeof(list_path));
     (paths + 0)->len_path++;
     (paths + 0)->path = (int *) calloc(paths->len_path, sizeof(int));
@@ -144,7 +314,7 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
     int index;
     int next_station = 0;
 
-    while (index_path < len_paths) {
+    while (index_path < index_curr_path) {
         last_station = (paths + index_path)->path[(paths + index_path)->len_path - 1];
         index = in_highway(highway, highway_len, last_station);
         if (distance < arrival) {
@@ -163,7 +333,7 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
                 path[i] = (paths + index_path)->path[i];
             }
             int len_path = (paths + index_path)->len_path;
-            for (int i = 0; i < len_paths; i++) {
+            for (int i = 0; i < index_curr_path; i++) {
                 free((paths + i)->path);
             }
             free(paths);
@@ -176,19 +346,22 @@ int shortest_path(station *highway, int highway_len, int distance, int arrival, 
                 len_previous_stations++;
                 previous_stations = (int *) realloc(previous_stations, len_previous_stations * sizeof(int));
                 previous_stations[len_previous_stations - 1] = next_station;
-                len_paths++;
-                paths = (list_path *) realloc(paths, len_paths * sizeof(list_path));
-                (paths + (len_paths - 1))->path = (int *) calloc((paths + index_path)->len_path + 1, sizeof(int));
-                for (int i = 0; i < (paths + index_path)->len_path; i++) {
-                    (paths + (len_paths - 1))->path[i] = (paths + index_path)->path[i];
+                index_curr_path++;
+                if (index_curr_path >= len_paths) {
+                    len_paths = len_paths * 2;
+                    paths = (list_path *) realloc(paths, len_paths * sizeof(list_path));
                 }
-                (paths + (len_paths - 1))->path[(paths + index_path)->len_path] = next_station;
-                (paths + (len_paths - 1))->len_path = (paths + index_path)->len_path + 1;
+                (paths + (index_curr_path - 1))->path = (int *) calloc((paths + index_path)->len_path + 1, sizeof(int));
+                for (int i = 0; i < (paths + index_path)->len_path; i++) {
+                    (paths + (index_curr_path - 1))->path[i] = (paths + index_path)->path[i];
+                }
+                (paths + (index_curr_path - 1))->path[(paths + index_path)->len_path] = next_station;
+                (paths + (index_curr_path - 1))->len_path = (paths + index_path)->len_path + 1;
             }
         }
         index_path++;
     }
-    for (int i = 0; i < len_paths; i++) {
+    for (int i = 0; i < index_curr_path; i++) {
         free((paths + i)->path);
     }
     free(paths);
@@ -203,225 +376,104 @@ int initialize_highway (station *highway, int highway_len) {
     return 1;
 }
 
-int main (int argc, char *argv[])
-{
-    char *line = NULL;
-    size_t line_len = 0;
-    ssize_t line_read;
+int delete_station (station *highway, int index) {
+    if (index != -1) {
+        (highway + index)->id = -2;
+        free((highway + index)->cars);
+        (highway + index)->cars = NULL; // per evitare errore con double free
+        (highway + index)->len_cars = 0;
+        free((highway + index)->right_queue);
+        (highway + index)->right_queue = NULL;
+        (highway + index)->len_rqueue= 0;
+        free((highway + index)->left_queue);
+        (highway + index)->left_queue = NULL;
+        (highway + index)->len_lqueue = 0;
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
 
-    char *command = NULL;
-    char *distance_c = NULL;
-    int distance = 0;
-    int arrival = 0;
-    int highway_len = 64;
-    int n_stations = 0;
-    int index = 0;
+int recalc_station (station *highway, int highway_len) {
     int len_cars = 0;
-    int car = 0;
-    int *curr_ptr = NULL;
-    station* highway = NULL;
-    highway = (station *) calloc(highway_len, sizeof(station));
-    initialize_highway(highway, highway_len);
-
-    int old_len = 0;
-    int j = 0;
-    int first_node = 0;
-    int end_node = 0;
     int max_dist = 0;
-    int *path = NULL;
-    int len_path = 0;
-
-    while ((line_read = getline(&line, &line_len, stdin)) != -1) {
-        command = strtok(line, " ");
-        if (strcmp(command, "aggiungi-stazione") == 0) {
-            if (n_stations > highway_len/4*3) {
-                station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
-                initialize_highway(new_highway, highway_len * 2);
-                re_hash(highway, new_highway, &highway_len);
-                free(highway);
-                highway = new_highway;
-                new_highway = NULL;
-            }
-            distance_c = strtok(NULL, " ");
-            distance = (int)strtol(distance_c, NULL, 10);
-            if (in_highway (highway, highway_len, distance) != -1) {
-                printf("non aggiunta\n");
-            }
-            else {
-                index = get_index(distance, highway_len, highway);
-                (highway + index)->id = distance;
-                len_cars = (int)strtol(strtok(NULL, " "), NULL, 10);
-                (highway + index)->cars = (int *) calloc(len_cars, sizeof(int));
-                (highway + index)->len_cars = len_cars;
-                curr_ptr = (highway + index)->cars;
-                for (int i = 0; i < len_cars; i++) {
-                    (highway + index)->cars[i] = (int)strtol(strtok(NULL, " "), NULL, 10); 
-                }
-                n_stations++;
-                printf("aggiunta\n");
-            }
-            
-        }
-        else if (strcmp(command, "demolisci-stazione") == 0) {
-            distance_c = strtok(NULL, " ");
-            distance = (int)strtol(distance_c, NULL, 10);
-            index = in_highway (highway, highway_len, distance);
-            if (index != -1) {
-                (highway + index)->id = -2;
-                free((highway + index)->cars);
-                (highway + index)->cars = NULL; // per evitare errore con double free
-                (highway + index)->len_cars = 0;
-                free((highway + index)->right_queue);
-                (highway + index)->right_queue = NULL;
-                (highway + index)->len_rqueue= 0;
-                free((highway + index)->left_queue);
-                (highway + index)->left_queue = NULL;
-                (highway + index)->len_lqueue = 0;
-                printf("demolita\n");
-                n_stations--;
-            }
-            else {
-                printf("non demolita\n");
-            }
-        }
-        else if (strcmp(command, "aggiungi-auto") == 0) {
-            distance_c = strtok(NULL, " ");
-            distance = (int)strtol(distance_c, NULL, 10);
-            index = in_highway(highway, highway_len, distance);
-            if (index == -1) {
-                printf("non aggiunta\n");
-            }
-            else {
-                (highway + index)->len_cars++;
-                len_cars = (highway + index)->len_cars;
-                (highway + index)->cars = (int *) realloc((highway + index)->cars, len_cars * sizeof(int));
-                car = (int)strtol(strtok(NULL, " "), NULL, 10);
-                (highway + index)->cars[len_cars-1] = car;
-                printf("aggiunta\n");
-            }
-        }
-        else if (strcmp(command, "rottama-auto") == 0) {
-            distance_c = strtok(NULL, " ");
-            distance = (int)strtol(distance_c, NULL, 10);
-            index = in_highway(highway, highway_len, distance);
-            if (index == -1) {
-                printf("non rottamata\n");
-            }
-            else {
-                old_len = (highway + index)->len_cars;
-                j = 0;
-                len_cars = old_len;
-                car = (int)strtol(strtok(NULL, " "), NULL, 10);
-                if (car_found(highway, index, car) == 1) {
-                    len_cars--;
-                    curr_ptr = (int *) calloc(len_cars, sizeof(int));
-                    for (int i = 0; i < old_len; i++) {
-                        if ((highway + index)->cars[i] != -1) {
-                            curr_ptr[j] = (highway + index)->cars[i];
-                            j++;
-                        }
-                    }
-                    free((highway + index)->cars);
-                    (highway + index)->len_cars = len_cars;
-                    (highway + index)->cars = curr_ptr;
-                    printf("rottamata\n");
-                    // da verificare curr_ptr utilizzo di memoria, e se si può fare una free
-                }
-                else {
-                    printf("non rottamata\n");
-                }
-            }
-        }
-        else if (strcmp(command, "pianifica-percorso") == 0) {
-            distance_c = strtok(NULL, " ");
-            distance = (int)strtol(distance_c, NULL, 10);
-            arrival = (int)strtol(strtok(NULL, " "), NULL, 10);
-            first_node = 0;
-            end_node = 0;
-            max_dist = 0;
-            if (distance < arrival) {
-                first_node = distance;
-                end_node = arrival;
-            } 
-            else {
-                first_node = arrival;
-                end_node = distance;
-            }
-            if (first_node == end_node) {
-                printf("%d\n", first_node);
-            }
-            else {
-                for (int i = 0; i < highway_len; i++) {
-                    if ((highway + i)->id != -2 && (highway + i)->id != -1) {
-                        free((highway + i)->right_queue);
-                        (highway + i)->right_queue = NULL; // per evitare errore double free
-                        free((highway + i)->left_queue);
-                        (highway + i)->left_queue = NULL;
-                        (highway + i)->len_rqueue = 0;
-                        (highway + i)->len_lqueue = 0;
-                    }
-                }
-                for (int i = 0; i < highway_len; i++) {
-                    len_cars = (highway + i)->len_cars;
-                    if (len_cars > 0) {
-                        max_dist = max_car(highway, i);
-                        for (int j = 0; j < highway_len; j++) {
-                            if ((highway + j)->id != -2 && (highway + j)->id != -1) {
-                                if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
-                                    // si può utilizzare calloc e poi ingrandirla al bisogno
-                                    (highway + i)->len_rqueue++;
-                                    (highway + i)->right_queue = (int *) realloc((highway + i)->right_queue, ((highway + i)->len_rqueue) * sizeof(int));
-                                    (highway + i)->right_queue[((highway + i)->len_rqueue)-1] = (highway + j)->id;
-                                }
-                                if ((highway + j)->id >= (highway + i)->id - max_dist && (highway + j)->id < (highway + i)->id) {
-                                    // si può utilizzare calloc e poi ingrandirla al bisogno
-                                    (highway + j)->len_lqueue++;
-                                    (highway + j)->left_queue = (int *) realloc((highway + j)->left_queue, ((highway + j)->len_lqueue) * sizeof(int));
-                                    (highway + j)->left_queue[((highway + j)->len_lqueue)-1] = (highway + i)->id;
-                                }
-                                // si può ottimizzare che stazione è già contenuta in right or left queue, e in caso aggiungerla
-                            }
-                        }
-                    }
-                }
-                for (int i = 0; i < highway_len; i++) {
-                    qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
-                    qsort((highway + i)->left_queue, (highway + i)->len_lqueue, sizeof(int), compare);
-                }
-                path = (int *) calloc(n_stations, sizeof(int));
-                len_path = 0;
-                len_path = shortest_path(highway, highway_len, distance, arrival, path);
-                if (len_path > 0) {
-                    if (distance < arrival) {
-                        for (int i = 0; i < len_path - 1; i++) {
-                            printf("%d ", path[i]);
-                        }
-                        printf("%d\n", path[len_path - 1]);
-                    }
-                    else {
-                        for (int i = len_path - 1; i > 0; i--) {
-                            printf("%d ", path[i]);
-                        }
-                        printf("%d\n", path[0]);
-                    }
-                }
-                else {
-                    printf("nessun percorso\n");
-                }
-                free(path);
-            }
-        }
-        else {
-            return 0;
+    for (int i = 0; i < highway_len; i++) {
+        if ((highway + i)->id != -2 && (highway + i)->id != -1) {
+            free((highway + i)->right_queue);
+            (highway + i)->right_queue = NULL; // per evitare errore double free
+            free((highway + i)->left_queue);
+            (highway + i)->left_queue = NULL;
+            (highway + i)->len_rqueue = 0;
+            (highway + i)->len_lqueue = 0;
         }
     }
     for (int i = 0; i < highway_len; i++) {
-        free((highway + i)->cars);
-        free((highway + i)->right_queue);
-        free((highway + i)->left_queue);
+        len_cars = (highway + i)->len_cars;
+        if (len_cars > 0) {
+            max_dist = max_car(highway, i);
+            for (int j = 0; j < highway_len; j++) {
+                if ((highway + j)->id != -2 && (highway + j)->id != -1) {
+                    if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
+                        // si può utilizzare calloc e poi ingrandirla al bisogno
+                        (highway + i)->len_rqueue++;
+                        (highway + i)->right_queue = (int *) realloc((highway + i)->right_queue, ((highway + i)->len_rqueue) * sizeof(int));
+                        (highway + i)->right_queue[((highway + i)->len_rqueue)-1] = (highway + j)->id;
+                    }
+                    if ((highway + j)->id >= (highway + i)->id - max_dist && (highway + j)->id < (highway + i)->id) {
+                        // si può utilizzare calloc e poi ingrandirla al bisogno
+                        (highway + j)->len_lqueue++;
+                        (highway + j)->left_queue = (int *) realloc((highway + j)->left_queue, ((highway + j)->len_lqueue) * sizeof(int));
+                        (highway + j)->left_queue[((highway + j)->len_lqueue)-1] = (highway + i)->id;
+                    }
+                    // si può ottimizzare che stazione è già contenuta in right or left queue, e in caso aggiungerla
+                }
+            }
+        }
     }
-    free(highway);
-    if (line)
-        free(line);
-    return 0;
+    for (int i = 0; i < highway_len; i++) {
+        qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
+        qsort((highway + i)->left_queue, (highway + i)->len_lqueue, sizeof(int), compare);
+    }
+    return 1;
 }
+
+int add_car (station *highway, int highway_len, int car, int index) {
+    int len_cars = 0; 
+    (highway + index)->len_cars++;
+    len_cars = (highway + index)->len_cars;
+    (highway + index)->cars = (int *) realloc((highway + index)->cars, len_cars * sizeof(int));
+    (highway + index)->cars[len_cars-1] = car;
+    return 1;
+}
+
+int remove_car (station *highway, int *curr_ptr, int car, int index) {
+    int old_len = 0;
+    int len_cars = 0;
+    int j = 0;
+    old_len = (highway + index)->len_cars;
+    len_cars = old_len;
+    if (car_found(highway, index, car) == 1) {
+        len_cars--;
+        curr_ptr = (int *) calloc(len_cars, sizeof(int));
+        for (int i = 0; i < old_len; i++) {
+            if ((highway + index)->cars[i] != -1) {
+                curr_ptr[j] = (highway + index)->cars[i];
+                j++;
+            }
+        }
+        free((highway + index)->cars);
+        (highway + index)->len_cars = len_cars;
+        (highway + index)->cars = curr_ptr;
+        return 1;
+        // da verificare curr_ptr utilizzo di memoria, e se si può fare una free
+    }
+    else {
+        return 0;
+    }
+}
+
+// ./test_gen_2023_macos -s 3000 -c 20 -C 100 -r 30
+// Test/test_gen_2023/test_gen_2023_macos -s 5000 -c 20 -C 200 -r 30 > Test/archivio_test_aperti/open_200.txt
+
+// open_104 / open_105 ha stesso tempo di parsing del verificatore --> open_104->612s / open_105->296s --> 104 sono meno istruzioni e ci impiega il triplo del tempo
