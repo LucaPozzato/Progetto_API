@@ -10,8 +10,10 @@ typedef struct station
     int *cars;
     int len_cars;
     int *right_queue;
+    int right_index;
     int len_rqueue;
     int *left_queue;
+    int left_index;
     int len_lqueue;
     int color;
 } station;
@@ -40,7 +42,7 @@ int delete_station(station *highway, int index);
 int recalc_station (station *highway, int highway_len, int distance, int arrival);
 int add_car (station *highway, int highway_len, int car, int index);
 int remove_car (station *highway, int *curr_ptr, int car, int index);
-int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *path, int *index, int *index_last_node);
+int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *index);
 
 int main (int argc, char *argv[])
 {
@@ -70,7 +72,7 @@ int main (int argc, char *argv[])
     while ((line_read = getline(&line, &line_len, stdin)) != -1) {
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
-            if (n_stations > highway_len/4*3) {
+            if (n_stations > highway_len/10*7) {
                 station *new_highway = (station *) calloc(highway_len * 2, sizeof(station));
                 initialize_highway(new_highway, highway_len * 2);
                 re_hash(highway, new_highway, &highway_len);
@@ -304,13 +306,17 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
     int queue_len = n_stations;
     queue_str *queue = (queue_str *) calloc(queue_len, sizeof(int*));
 
+    for (int i = 0; i < queue_len; i++) {
+        (queue + i)->id = -1;
+        (queue + i)->father = -1;
+    }
+
     (queue + 0)->id = first_node;
     int index = in_highway(highway, highway_len, first_node);
     (highway + index)->color = 1;
 
     index = 0;
-    int index_last_node = 1;
-    find_shortest_path(highway, highway_len, queue, queue_len, direction, end_node, &found, &index, &index_last_node);
+    found = find_shortest_path(highway, highway_len, queue, queue_len, direction, end_node, &index);
 
     int path_index = 0;
     if (found != -1) {
@@ -332,43 +338,43 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
     }
 }
 
-int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *path, int *index, int *index_last_node) {
+int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *index) {
     queue_str *curr_node = NULL;
     int *next_nodes = (int *) calloc(queue_len, sizeof(int));
     int next_nodes_len = 0;
     int station_index = 0;
     int next_node_index = 0;
-    while (*index < *index_last_node) {
+    int index_last_node = 1;
+    while (*index < index_last_node) {
         curr_node = (queue + *index);
         station_index = in_highway(highway, highway_len, curr_node->id);
         if (direction == 1) {
             next_nodes = (highway + station_index)->right_queue;
-            next_nodes_len = (highway + station_index)->len_rqueue;
+            next_nodes_len = (highway + station_index)->right_index;
         }
         else {
             next_nodes = (highway + station_index)->left_queue;
-            next_nodes_len = (highway + station_index)->len_lqueue;
+            next_nodes_len = (highway + station_index)->left_index;
         }
 
         if (curr_node->id == end_node) {
-            *path = curr_node->id;
-            return 1;
+            return curr_node->id;
         }
 
         if (next_nodes_len > 0) {
             for (int i = 0; i < next_nodes_len; i++) {
                 next_node_index = in_highway(highway, highway_len, next_nodes[i]);
-                if ((highway + next_node_index)-> color == 0) {
-                    (highway + next_node_index)-> color = 1;
-                    (queue + *index_last_node)->id = next_nodes[i];
-                    (queue + *index_last_node)->father = curr_node->id;
-                    *index_last_node = *index_last_node + 1;
+                if ((highway + next_node_index)->color == 0) {
+                    (highway + next_node_index)->color = 1;
+                    (queue + index_last_node)->id = next_nodes[i];
+                    (queue + index_last_node)->father = curr_node->id;
+                    index_last_node++;
                 }
             }   
         }
         *index = *index + 1;
     }
-    return 0;
+    return -1;
 }
 
 int initialize_highway (station *highway, int highway_len) {
@@ -402,6 +408,7 @@ int recalc_station (station *highway, int highway_len, int distance, int arrival
     int max_dist = 0;
     int first_node = 0;
     int end_node = 0;
+    // int len_station = 32;
 
     if (distance < arrival) {
         first_node = distance;
@@ -416,15 +423,17 @@ int recalc_station (station *highway, int highway_len, int distance, int arrival
         if ((highway + i)->id >= first_node && (highway + i)->id <= end_node) {
             if (distance < arrival) {
                 free((highway + i)->right_queue);
-                (highway + i)->right_queue = NULL; // per evitare errore double free
-                (highway + i)->len_rqueue = 0;
+                (highway + i)->len_rqueue = 32;
+                (highway + i)->right_queue = (int *) calloc((highway + i)->len_rqueue, sizeof(int));
                 (highway + i)->color = 0;
+                (highway + i)->right_index = 0;
             }
             else {
                 free((highway + i)->left_queue);
-                (highway + i)->left_queue = NULL;
-                (highway + i)->len_lqueue = 0;
+                (highway + i)->len_lqueue = 32;
+                (highway + i)->left_queue = (int *) calloc((highway + i)->len_lqueue, sizeof(int));
                 (highway + i)->color = 0;
+                (highway + i)->left_index = 0;
             }
         }
     }
@@ -438,17 +447,24 @@ int recalc_station (station *highway, int highway_len, int distance, int arrival
                         if (distance < arrival ) {
                             if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
                                 // si può utilizzare calloc e poi ingrandirla al bisogno
-                                (highway + i)->len_rqueue++;
-                                (highway + i)->right_queue = (int *) realloc((highway + i)->right_queue, ((highway + i)->len_rqueue) * sizeof(int));
-                                (highway + i)->right_queue[((highway + i)->len_rqueue)-1] = (highway + j)->id;
+                                if ((highway + i)->right_index >= (highway + i)->len_rqueue - 1) {
+                                    (highway + i)->len_rqueue = (highway + i)->len_rqueue * 2;
+                                    (highway + i)->right_queue = (int *) realloc((highway + i)->right_queue, (highway + i)->len_rqueue * sizeof(int));
+                                }
+                                (highway + i)->right_queue[(highway + i)->right_index] = (highway + j)->id;
+                                (highway + i)->right_index++;
                             }
                         }
                         else {
                             if ((highway + j)->id >= (highway + i)->id - max_dist && (highway + j)->id < (highway + i)->id) {
                                 // si può utilizzare calloc e poi ingrandirla al bisogno
-                                (highway + j)->len_lqueue++;
-                                (highway + j)->left_queue = (int *) realloc((highway + j)->left_queue, ((highway + j)->len_lqueue) * sizeof(int));
-                                (highway + j)->left_queue[((highway + j)->len_lqueue)-1] = (highway + i)->id;
+                                if ((highway + j)->left_index >= (highway + j)->len_lqueue - 1) {
+                                    (highway + j)->len_lqueue = (highway + j)->len_lqueue * 2;
+                                    (highway + j)->left_queue = (int *) realloc((highway + j)->left_queue, (highway + j)->len_lqueue * sizeof(int));
+                                }
+                                (highway + j)->left_queue[(highway + j)->left_index] = (highway + i)->id;
+                                (highway + j)->left_index++;
+
                             }
                         }
                         // si può ottimizzare che stazione è già contenuta in right or left queue, e in caso aggiungerla
@@ -461,10 +477,10 @@ int recalc_station (station *highway, int highway_len, int distance, int arrival
     for (int i = 0; i < highway_len; i++) {
         if ((highway + i)->id >= first_node && (highway + i)->id <= end_node) {
             if (distance < arrival) {
-                qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
+                qsort((highway + i)->right_queue, (highway + i)->right_index, sizeof(int), compare);
             }
             else {
-                qsort((highway + i)->left_queue, (highway + i)->len_lqueue, sizeof(int), compare);
+                qsort((highway + i)->left_queue, (highway + i)->left_index, sizeof(int), compare);
             }
         }
     }
