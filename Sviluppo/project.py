@@ -11,13 +11,13 @@ PARTIAL_GRAPH = os.getenv("PYLAB_PARTIAL", False) == "true"
 print(f"DEBUG: {DEBUG}")
 print(f"PROFILE: {PROFILE}")
 
-file = open(sys.argv[1], "r")
-basefile = os.path.basename(sys.argv[1])
+file = open("Test/archivio_test_aperti/open_100.txt", "r")
+basefile = os.path.basename("Test/archivio_test_aperti/open_100.txt")
 output = open("Output/"+basefile+".output", "w+")
 lines = file.readlines()
 highway = {}
 
-def add_station(station, cars):
+def add_station(station, cars, n_station):
     if station in highway:
         output.write("non aggiunta\n")            
     else:
@@ -32,6 +32,7 @@ def add_station(station, cars):
         highway[station]["stations_sx"] = []
         highway[station]["explored"] = 0
         output.write("aggiunta\n")
+        n_station[0] += 1
 
 def del_station(station):
     if station in highway:
@@ -79,53 +80,63 @@ def search_path(stn_start, stn_end):
             print(f"STN: {s}, {highway[s]}")
         print()
 
-    path = []
+    path = [0]
+    paths = []
 
-    queue = [node_st]
+    index = 0
+    queue = [[node_st, 0]]
     highway[node_st]["explored"] = 1
 
     if node_st == node_end:
         output.write(node_st)
     else:
-        recursion(highway, queue, direction, node_end, path)
-        print(path)
+        recursion(highway, queue, direction, node_end, path, index)
+        for i in range(0, len(queue)):
+            for j in range(0, len(queue)):
+                if queue[j][0] == path[0]:
+                    paths.append(path[0])
+                    path[0] = queue[j][1]
+                    break
+        print(len(queue))
         
-        if len(path) <= 0:
+        if len(paths) <= 0:
             output.write("nessun percorso\n")
         else:
             string = ""
             if stn_start > stn_end:
-                string = " ".join(str(i) for i in path)
+                string = " ".join(str(i) for i in paths)
                 if DEBUG:
                     print(string)
                 output.write(string.strip() + "\n")
             else:
-                path.reverse()
-                string = " ".join(str(i) for i in path)
+                paths.reverse()
+                string = " ".join(str(i) for i in paths)
                 if DEBUG:
                     print(string)
                 output.write(string.strip() + "\n")
 
 
-def recursion(highway, queue, direction, node_end, path):
-    if len(queue) > 0:
-        v = queue.pop(0)
+def recursion(highway, queue, direction, node_end, path, index):
+    if (index < len(queue)) :
+        if len(queue) > 0:
+            v = queue[index]
+            if direction == 1:
+                next_nodes = highway[v[0]]["stations_dx"]
+            else:
+                next_nodes = highway[v[0]]["stations_sx"]
 
-        if direction == 1:
-            next_nodes = highway[v]["stations_dx"]
-        else:
-            next_nodes = highway[v]["stations_sx"]
+            if v[0] == node_end:
+                path[0] = v[0]
+                return 1
 
-        if v == node_end:
-            path.append(v)
-            return 1
+            for next_node in next_nodes:
+                if highway[next_node]["explored"] == 0:
+                    highway[next_node]["explored"] = 1
+                    q = [next_node, v[0]]
+                    queue.append(q)
 
-        for next_node in next_nodes:
-            if highway[next_node]["explored"] == 0:
-                highway[next_node]["explored"] = 1
-                queue.append(next_node)
-
-        recursion(highway, queue, direction, node_end, path)
+            index += 1
+            recursion(highway, queue, direction, node_end, path, index)
     else:
         return 0
 
@@ -163,12 +174,13 @@ def graph_rebuild(stn_start, stn_end):
 
 
 def main():
+    n_station = [0]
     for i in lines:
         commands = i.split()
         if(commands[0] == "aggiungi-stazione"):
             station = int(commands[1])
             cars = [int(commands[j+3]) for j in range(int(commands[2]))]
-            add_station(station, cars)
+            add_station(station, cars, n_station)
 
         if(commands[0] == "demolisci-stazione"):
             station = int(commands[1])
@@ -187,6 +199,7 @@ def main():
         if(commands[0] == "pianifica-percorso"):
             stn_start = int(commands[1])
             stn_end = int(commands[2])
+            print("number of starion: ", n_station[0])
             search_path(stn_start, stn_end)
 
 if PROFILE:
