@@ -19,7 +19,6 @@ typedef struct list_path
 {
     int *path;
     int len_path;
-    int path_index;
 } list_path;
 
 int get_index (int key, int highway_len, station* highway);
@@ -447,9 +446,6 @@ int recalc_station (station *highway, int highway_len, int distance, int arrival
                 max_dist = max_car(highway, i);
                 for (int j = 0; j < highway_len; j++) {
                     if ((highway + j)->id >= first_node && (highway + j)->id <= end_node) {
-                        if (first_node == 18991) {
-                            printf("brr");
-                        }
                         if (distance < arrival ) {
                             if ((highway + j)->id <= (highway + i)->id + max_dist && (highway + j)->id > (highway + i)->id) {
                                 // si può utilizzare calloc e poi ingrandirla al bisogno
