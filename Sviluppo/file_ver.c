@@ -40,7 +40,7 @@ int delete_station(station *highway, int index);
 int recalc_station (station *highway, int highway_len, int distance, int arrival);
 int add_car (station *highway, int highway_len, int car, int index);
 int remove_car (station *highway, int *curr_ptr, int car, int index);
-int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *path, int *index, int *index_last_node);
+int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *index);
 
 int main (int argc, char *argv[])
 {
@@ -324,8 +324,7 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
     (highway + index)->color = 1;
 
     index = 0;
-    int index_last_node = 1;
-    find_shortest_path(highway, highway_len, queue, queue_len, direction, end_node, &found, &index, &index_last_node);
+    found = find_shortest_path(highway, highway_len, queue, queue_len, direction, end_node, &index);
 
     int path_index = 0;
     if (found != -1) {
@@ -338,20 +337,23 @@ int shortest_path (station *highway, int highway_len, int distance, int arrival,
                 }
             }
         }
+        free(queue);
         return path_index;
     }
     else {
+        free(queue);
         return 0;
     }
 }
 
-int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *path, int *index, int *index_last_node) {
+int find_shortest_path (station *highway, int highway_len, queue_str *queue, int queue_len, int direction, int end_node, int *index) {
     queue_str *curr_node = NULL;
     int *next_nodes = (int *) calloc(queue_len, sizeof(int));
     int next_nodes_len = 0;
     int station_index = 0;
     int next_node_index = 0;
-    if (*index < *index_last_node) {
+    int index_last_node = 1;
+    while (*index < index_last_node) {
         curr_node = (queue + *index);
         station_index = in_highway(highway, highway_len, curr_node->id);
         if (direction == 1) {
@@ -364,9 +366,7 @@ int find_shortest_path (station *highway, int highway_len, queue_str *queue, int
         }
 
         if (curr_node->id == end_node) {
-            *path = curr_node->id;
-            free(next_nodes);
-            return 1;
+            return curr_node->id;
         }
 
         if (next_nodes_len > 0) {
@@ -374,22 +374,16 @@ int find_shortest_path (station *highway, int highway_len, queue_str *queue, int
                 next_node_index = in_highway(highway, highway_len, next_nodes[i]);
                 if ((highway + next_node_index)-> color == 0) {
                     (highway + next_node_index)-> color = 1;
-                    (queue + *index_last_node)->id = next_nodes[i];
-                    (queue + *index_last_node)->father = curr_node->id;
-                    *index_last_node = *index_last_node + 1;
+                    (queue + index_last_node)->id = next_nodes[i];
+                    (queue + index_last_node)->father = curr_node->id;
+                    index_last_node++;
                 }
             }   
         }
         *index = *index + 1;
-        find_shortest_path(highway, highway_len, queue, queue_len, direction, end_node, path, index, index_last_node);
     }
-    else {
-        free(next_nodes);
-        return 0;
-    }
-    return 0;
+    return -1;
 }
-
 
 int initialize_highway (station *highway, int highway_len) {
     for (int i = 0; i < highway_len; i++) {
