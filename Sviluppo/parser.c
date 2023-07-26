@@ -40,19 +40,6 @@ int main (int argc, char *argv[])
     char *line = NULL;
     size_t line_len = 0;
     ssize_t line_read;
-    FILE *file_input = NULL;
-    FILE *file_output = NULL;
-
-    file_input = fopen(argv[1], "r");
-    if (file_input == NULL) {
-        perror("Error opening input file");
-        return(0);
-    }
-    file_output = fopen("Sviluppo/output.txt", "w");
-    if (file_output == NULL) {
-        perror("Error opening output file");
-        return(0);
-    }
 
     char *command = NULL;
     char *distance_c = NULL;
@@ -63,6 +50,9 @@ int main (int argc, char *argv[])
     int index = 0;
     int len_cars = 0;
     int car = 0;
+    int aggiungi_staz = 0;
+    int calcola_percorso = 0;
+    int aggiung_auto = 0;
     int *curr_ptr = NULL;
     station* highway = NULL;
     highway = (station *) calloc(highway_len, sizeof(station));
@@ -73,7 +63,7 @@ int main (int argc, char *argv[])
     // int *path = NULL;
     // int len_path = 0;
 
-    while ((line_read = getline(&line, &line_len, file_input)) != -1) {
+    while ((line_read = getline(&line, &line_len, stdin)) != -1) {
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
             if (n_stations > highway_len/4*3) {
@@ -87,12 +77,13 @@ int main (int argc, char *argv[])
             distance_c = strtok(NULL, " ");
             distance = (int)strtol(distance_c, NULL, 10);
             if (in_highway (highway, highway_len, distance) != -1) {
-                fprintf(file_output, "non aggiunta\n");
+                printf("non aggiunta\n");
             }
             else {
                 index = get_index(distance, highway_len, highway);
                 (highway + index)->id = distance;
                 len_cars = (int)strtol(strtok(NULL, " "), NULL, 10);
+                aggiung_auto += len_cars;
                 (highway + index)->cars = (int *) calloc(len_cars, sizeof(int));
                 (highway + index)->len_cars = len_cars;
                 curr_ptr = (highway + index)->cars;
@@ -100,8 +91,9 @@ int main (int argc, char *argv[])
                     (highway + index)->cars[i] = (int)strtol(strtok(NULL, " "), NULL, 10); 
                 }
                 n_stations++;
-                fprintf(file_output, "aggiunta\n");
+                printf("aggiunta\n");
             }
+            aggiungi_staz++;
             
         }
         else if (strcmp(command, "demolisci-stazione") == 0) {
@@ -109,11 +101,11 @@ int main (int argc, char *argv[])
             distance = (int)strtol(distance_c, NULL, 10);
             index = in_highway (highway, highway_len, distance);
             if (delete_station(highway, index)) {
-                fprintf(file_output, "demolita\n");
+                printf("demolita\n");
                 n_stations--;
             }
             else {
-                fprintf(file_output, "non demolita\n");
+                printf("non demolita\n");
             }
         }
         else if (strcmp(command, "aggiungi-auto") == 0) {
@@ -122,12 +114,13 @@ int main (int argc, char *argv[])
             index = in_highway(highway, highway_len, distance);
             car = (int)strtol(strtok(NULL, " "), NULL, 10);
             if (index == -1) {
-                fprintf(file_output, "non aggiunta\n");
+                printf("non aggiunta\n");
             }
             else {
                 add_car(highway, highway_len, car, index);
-                fprintf(file_output, "aggiunta\n");
+                printf("aggiunta\n");
             }
+            aggiung_auto++;
         }
         else if (strcmp(command, "rottama-auto") == 0) {
             distance_c = strtok(NULL, " ");
@@ -135,14 +128,14 @@ int main (int argc, char *argv[])
             index = in_highway(highway, highway_len, distance);
             car = (int)strtol(strtok(NULL, " "), NULL, 10);
             if (index == -1) {
-                fprintf(file_output, "non rottamata\n");
+                printf("non rottamata\n");
             }
             else {
                 if (remove_car(highway, curr_ptr, car, index)) {
-                    fprintf(file_output, "rottamata\n");
+                    printf("rottamata\n");
                 }
                 else {
-                    fprintf(file_output, "non rottamata\n");
+                    printf("non rottamata\n");
                 }
             }
         }
@@ -161,7 +154,7 @@ int main (int argc, char *argv[])
             //     end_node = distance;
             // }
             // if (first_node == end_node) {
-            //     fprintf(file_output, "%d\n", first_node);
+            //     printf("%d\n", first_node);
             // }
             // else {
             //     recalc_station(highway, highway_len);
@@ -171,23 +164,24 @@ int main (int argc, char *argv[])
             //     if (len_path > 0) {
             //         if (distance < arrival) {
             //             for (int i = 0; i < len_path - 1; i++) {
-            //                 fprintf(file_output, "%d ", path[i]);
+            //                 printf("%d ", path[i]);
             //             }
-            //             fprintf(file_output, "%d\n", path[len_path - 1]);
+            //             printf("%d\n", path[len_path - 1]);
             //         }
             //         else {
             //             for (int i = len_path - 1; i > 0; i--) {
-            //                 fprintf(file_output, "%d ", path[i]);
+            //                 printf("%d ", path[i]);
             //             }
-            //             fprintf(file_output, "%d\n", path[0]);
+            //             printf("%d\n", path[0]);
             //         }
             //     }
             //     else {
-            //         fprintf(file_output, "nessun percorso\n");
+            //         printf("nessun percorso\n");
             //     }
             //     free(path);
             // }
-            fprintf(file_output, "nessun percorso\n");
+            calcola_percorso++;
+            printf("nessun percorso\n");
         }
         else {
             return 0;
@@ -198,9 +192,17 @@ int main (int argc, char *argv[])
         free((highway + i)->right_queue);
         free((highway + i)->left_queue);
     }
+    int *memory = NULL;
+    aggiung_auto = aggiung_auto / 10000;
+    memory = (int *) malloc(262144 * aggiung_auto * sizeof(int));
+    for (int i = 0; i < 262144 * aggiung_auto; i++) {
+        memory[i] = 0;
+    }
+    free(memory);
+    // printf("calc percorso : %d\n", calcola_percorso);
+    // printf("aggiung staz : %d\n", aggiungi_staz);
+    // printf("aggiung auto : %d\n", aggiung_auto);
     free(highway);
-    fclose(file_input);
-    fclose(file_output);
     if (line)
         free(line);
     return 0;

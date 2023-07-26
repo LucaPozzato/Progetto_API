@@ -470,7 +470,7 @@ int recalc_station (station *highway, int highway_len, int distance, int arrival
         }
     }
     for (int i = 0; i < highway_len; i++) {
-        if ((highway + i)->id != -1 && (highway + i)->id != -2) {
+        if ((highway + i)->id >= first_node && (highway + i)->id <= end_node) {
             if (distance < arrival) {
                 qsort((highway + i)->right_queue, (highway + i)->len_rqueue, sizeof(int), compare);
             }

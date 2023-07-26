@@ -29,7 +29,8 @@ def add_station(station, cars):
             else:
                 highway[station]["cars"][c] += 1
         highway[station]["stations_dx"] = [] 
-        highway[station]["stations_sx"] = [] 
+        highway[station]["stations_sx"] = []
+        highway[station]["explored"] = 0
         output.write("aggiunta\n")
 
 def del_station(station):
@@ -62,9 +63,11 @@ def search_path(stn_start, stn_end):
     if stn_start < stn_end:
         node_st = stn_start
         node_end = stn_end
+        direction = 1
     else:
         node_st = stn_end
         node_end = stn_start
+        direction = 0
     
     graph_rebuild(stn_start, stn_end)
 
@@ -76,57 +79,61 @@ def search_path(stn_start, stn_end):
             print(f"STN: {s}, {highway[s]}")
         print()
 
-    paths = []
-    path_list = [[node_st]]
-    path_index = 0
+    path = []
 
-    previous_nodes = [node_st]
+    queue = [node_st]
+    highway[node_st]["explored"] = 1
 
     if node_st == node_end:
         output.write(node_st)
-
-    while path_index < len(path_list):
-        current_path = path_list[path_index]
-        last_node = current_path[-1]
-        if stn_start < stn_end:
-            next_nodes = highway[last_node]["stations_dx"]
-        else:
-            next_nodes = highway[last_node]["stations_sx"]
-
-        if node_end in next_nodes:
-            current_path.append(node_end)
-            paths.append(current_path)
-        
-        for next_node in next_nodes:
-            if not next_node in previous_nodes:
-                new_path = current_path[:]
-                new_path.append(next_node)
-                path_list.append(new_path)
-                previous_nodes.append(next_node)
-        path_index = path_index + 1
-
-    if len(paths) > 0:
-        string = ""
-        if stn_start < stn_end:
-            string = " ".join(str(i) for i in paths[0])
-            if DEBUG:
-                print(string)
-            output.write(string.strip() + "\n")
-        else:
-            paths[0].reverse()
-            string = " ".join(str(i) for i in paths[0])
-            if DEBUG:
-                print(string)
-            output.write(string.strip() + "\n")
     else:
-        if DEBUG:
-            print("Nessun percorso\n")
-        output.write("nessun percorso\n")
+        recursion(highway, queue, direction, node_end, path)
+        print(path)
+        
+        if len(path) <= 0:
+            output.write("nessun percorso\n")
+        else:
+            string = ""
+            if stn_start > stn_end:
+                string = " ".join(str(i) for i in path)
+                if DEBUG:
+                    print(string)
+                output.write(string.strip() + "\n")
+            else:
+                path.reverse()
+                string = " ".join(str(i) for i in path)
+                if DEBUG:
+                    print(string)
+                output.write(string.strip() + "\n")
+
+
+def recursion(highway, queue, direction, node_end, path):
+    if len(queue) > 0:
+        v = queue.pop(0)
+
+        if direction == 1:
+            next_nodes = highway[v]["stations_dx"]
+        else:
+            next_nodes = highway[v]["stations_sx"]
+
+        if v == node_end:
+            path.append(v)
+            return 1
+
+        for next_node in next_nodes:
+            if highway[next_node]["explored"] == 0:
+                highway[next_node]["explored"] = 1
+                queue.append(next_node)
+
+        recursion(highway, queue, direction, node_end, path)
+    else:
+        return 0
 
 def graph_rebuild(stn_start, stn_end):
     for k in highway:
         highway[k]["stations_dx"] = []
         highway[k]["stations_sx"] = []
+        highway[k]["explored"] = 0
 
     range_start = min(stn_start, stn_end)
     range_end = max(stn_start, stn_end) + 1
