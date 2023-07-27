@@ -1,0 +1,212 @@
+import sys
+import os
+import cProfile
+
+DEBUG = os.getenv("PYLAB_DEBUG", False) == "true"
+PROFILE = os.getenv("PYLAB_PROFILE", False) == "true"
+
+print(f"DEBUG: {DEBUG}")
+print(f"PROFILE: {PROFILE}")
+
+file = open("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_100.txt", "r")
+# basefile = os.path.basename("Test/archivio_test_aperti/open_100.txt")
+output = open("/Users/luca/Documents/Progetto-API/sviluppo/output.txt", "w+")
+lines = file.readlines()
+highway = []
+
+def add_station(station, cars):
+    if len(highway) == 0:
+        stn = {'id': station, 'cars': cars}
+        highway.append(stn)
+        output.write("aggiunta\n")
+    else:
+        i = 0
+        while i < len(highway):
+            if highway[i]['id'] < station:
+                i += 1
+            elif highway[i]['id'] == station:
+                output.write("non aggiunta\n")
+                break
+            else:
+                stn = {'id': station, 'cars': cars}
+                highway.insert(i ,stn)
+                output.write("aggiunta\n")
+                break
+        if i == len(highway):
+            stn = {'id': station, 'cars': cars}
+            highway.insert(i ,stn)
+            output.write("aggiunta\n")
+    return 0
+
+def del_station(station):
+    i = 0
+    found = 0
+    while i < len(highway):
+        if highway[i]['id'] == station:
+            highway.remove(highway[i])
+            output.write("demolita\n")
+            found = 1
+            break
+        i += 1
+    if found == 0:
+        output.write("non demolita\n")
+    return 0
+
+def add_car(station, autonomy):
+    i = 0
+    found = 0
+    while i < len(highway):
+        if highway[i]['id'] == station:
+            highway[i]['cars'].append(autonomy)
+            output.write("aggiunta\n")
+            found = 1
+            break
+        i += 1
+    if found == 0:
+        output.write("non aggiunta\n")
+    return 0
+
+def del_car(station, autonomy):
+    i = 0
+    found = 0
+    while i < len(highway):
+        if highway[i]['id'] == station:
+            if autonomy in highway[i]['cars']:
+                highway[i]['cars'].remove(autonomy)
+                output.write("rottamata\n")
+                found = 1
+                break
+            else:
+                break
+        i += 1
+    if found == 0:
+        output.write("non rottamata\n")
+    return 0
+
+def search_path(stn_start, stn_end):
+    if stn_start < stn_end:
+        direction = 1
+    elif stn_start == stn_end:
+        output.write(str(stn_start) + "\n")
+    else:
+        direction = -1
+    path = []
+    found = 0
+    index = 0
+    end_index = 0
+    best_index = 0
+    i = 0
+    if direction == 1:
+        while i < len(highway):
+            if highway[i]['id'] == stn_start:
+                index = i
+            elif highway[i]['id'] == stn_end:
+                end_index = i
+                break
+            i += 1
+    else:
+        while i < len(highway):
+            if highway[i]['id'] == stn_end:
+                end_index = i
+            elif highway[i]['id'] == stn_start:
+                index = i
+                break
+            i += 1
+    car = max(highway[index]['cars'])
+    stop = index
+    car_stop = car
+    path.append(highway[index]['id'])
+    best_flag = 0
+    if direction == 1:
+        print("dx")
+        # while highway[index]['id'] <= highway[end_index]['id']:
+        #     while highway[index]['id'] < highway[stop]['id'] + car_stop:
+        #         if highway[index]['id'] == stn_end:
+        #             found = 1
+        #             break
+        #         if highway[index]['id'] + car > highway[stop]['id'] + car_stop:
+        #             best_flag = 1
+        #             best_index = index
+        #         index += direction
+        #         car = max(highway[index]['cars'])
+        #     if found == 1:
+        #         path.append(stn_end)
+        #         break
+        #     elif best_flag == 1:
+        #         stop = best_index
+        #         car_stop = max(highway[stop]['cars'])
+        #         path.append(highway[stop]['id'])
+        #         index += direction
+        #     else:
+        #         break
+
+        # if found == 0:
+        #     path = []
+        #     output.write("nessun percorso\n")
+        # else:
+        #     for i in range(len(path) - 1):
+        #         output.write(str(path[i]) + " ")
+        #     output.write(str(path[(len(path) - 1)])+ "\n")
+        print(path)
+    else:
+        print("sx")
+        while highway[index]['id'] >= highway[end_index]['id']:
+            while highway[index]['id'] > highway[stop]['id'] - car_stop:
+                if highway[index]['id'] == stn_end:
+                    found = 1
+                    break
+                if highway[index]['id'] - car < highway[stop]['id'] - car_stop:
+                    best_index = index
+                index += direction
+                car = max(highway[index]['cars'])
+            if found == 1:
+                path.append(stn_end)
+            else:
+                stop = best_index
+                car_stop = max(highway[stop]['cars'])
+                path.append(highway[stop]['id'])
+                index += direction
+        if found == 0:
+            path = []
+            output.write("nessun percorso\n")
+        else:
+            for i in range(len(path) - 1):
+                output.write(str(path[i]) + " ")
+            output.write(str(path[len(path) - 1]) + "\n")
+        print(path)
+    return 0
+
+def main():
+    for i in lines:
+        commands = i.split()
+        if(commands[0] == "aggiungi-stazione"):
+            station = int(commands[1])
+            cars = [int(commands[j+3]) for j in range(int(commands[2]))]
+            add_station(station, cars)
+
+        if(commands[0] == "demolisci-stazione"):
+            station = int(commands[1])
+            del_station(station)
+
+        if(commands[0] == "aggiungi-auto"):
+            station = int(commands[1])
+            autonomy = int(commands[2])
+            add_car(station, autonomy)
+
+        if(commands[0] == "rottama-auto"):
+            station = int(commands[1])
+            autonomy = int(commands[2])
+            del_car(station, autonomy)
+
+        if(commands[0] == "pianifica-percorso"):
+            stn_start = int(commands[1])
+            stn_end = int(commands[2])
+            search_path(stn_start, stn_end)
+
+if PROFILE:
+    cProfile.run("main()")
+else:
+    main()
+
+file.close()
+output.close()
