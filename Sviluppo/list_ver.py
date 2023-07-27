@@ -16,7 +16,7 @@ highway = []
 
 def add_station(station, cars):
     if len(highway) == 0:
-        stn = {'id': station, 'cars': cars}
+        stn = {'id': station, 'cars': cars, 'explored': 0}
         highway.append(stn)
         output.write("aggiunta\n")
     else:
@@ -28,12 +28,12 @@ def add_station(station, cars):
                 output.write("non aggiunta\n")
                 break
             else:
-                stn = {'id': station, 'cars': cars}
+                stn = {'id': station, 'cars': cars, 'explored': 0}
                 highway.insert(i ,stn)
                 output.write("aggiunta\n")
                 break
         if i == len(highway):
-            stn = {'id': station, 'cars': cars}
+            stn = {'id': station, 'cars': cars, 'explored': 0}
             highway.insert(i ,stn)
             output.write("aggiunta\n")
     return 0
@@ -86,15 +86,10 @@ def del_car(station, autonomy):
 def search_path(stn_start, stn_end):
     if stn_start < stn_end:
         direction = 1
-    elif stn_start == stn_end:
-        output.write(str(stn_start) + "\n")
     else:
         direction = -1
-    path = []
-    found = 0
     index = 0
     end_index = 0
-    best_index = 0
     i = 0
     if direction == 1:
         while i < len(highway):
@@ -112,69 +107,73 @@ def search_path(stn_start, stn_end):
                 index = i
                 break
             i += 1
-    car = max(highway[index]['cars'])
-    stop = index
-    car_stop = car
-    path.append(highway[index]['id'])
-    best_flag = 0
-    if direction == 1:
-        print("dx")
-        # while highway[index]['id'] <= highway[end_index]['id']:
-        #     while highway[index]['id'] < highway[stop]['id'] + car_stop:
-        #         if highway[index]['id'] == stn_end:
-        #             found = 1
-        #             break
-        #         if highway[index]['id'] + car > highway[stop]['id'] + car_stop:
-        #             best_flag = 1
-        #             best_index = index
-        #         index += direction
-        #         car = max(highway[index]['cars'])
-        #     if found == 1:
-        #         path.append(stn_end)
-        #         break
-        #     elif best_flag == 1:
-        #         stop = best_index
-        #         car_stop = max(highway[stop]['cars'])
-        #         path.append(highway[stop]['id'])
-        #         index += direction
-        #     else:
-        #         break
 
-        # if found == 0:
-        #     path = []
-        #     output.write("nessun percorso\n")
-        # else:
-        #     for i in range(len(path) - 1):
-        #         output.write(str(path[i]) + " ")
-        #     output.write(str(path[(len(path) - 1)])+ "\n")
-        print(path)
+    queue = [[index, -1]]
+    if stn_start == stn_end:
+        output.write(str(stn_start) + "\n")
     else:
-        print("sx")
-        while highway[index]['id'] >= highway[end_index]['id']:
-            while highway[index]['id'] > highway[stop]['id'] - car_stop:
-                if highway[index]['id'] == stn_end:
-                    found = 1
-                    break
-                if highway[index]['id'] - car < highway[stop]['id'] - car_stop:
-                    best_index = index
-                index += direction
-                car = max(highway[index]['cars'])
-            if found == 1:
-                path.append(stn_end)
-            else:
-                stop = best_index
-                car_stop = max(highway[stop]['cars'])
-                path.append(highway[stop]['id'])
-                index += direction
-        if found == 0:
+        for i in range(index, end_index):
+            highway[i]['explored'] = 0
+
+        found = bfs(end_index, queue, direction)
+        if found != -1:
             path = []
-            output.write("nessun percorso\n")
+            for i in range(0, len(queue)):
+                queue[i][0] = highway[queue[i][0]]['id']
+                queue[i][1] = highway[queue[i][1]]['id']
+            for i in range(0, len(queue)):
+                for j in range(0, len(queue)):
+                    if queue[j][0] == found:
+                        path.append(found)
+                        found = queue[j][1]
+                        break
+            print(path)
+            string = ""
+            if stn_start > stn_end:
+                string = " ".join(str(i) for i in path)
+                output.write(string.strip() + "\n")
+            else:
+                path.reverse()
+                string = " ".join(str(i) for i in path)
+                output.write(string.strip() + "\n")
         else:
-            for i in range(len(path) - 1):
-                output.write(str(path[i]) + " ")
-            output.write(str(path[len(path) - 1]) + "\n")
-        print(path)
+            output.write("nessun percorso\n")
     return 0
+
+def bfs(end_index, queue, direction):
+    next_nodes = []
+    i = 0
+    index = 0
+    while (i < len(queue)) :
+        v = queue[i]
+        index = v[0]
+        if direction == 1:
+            next_nodes = []
+            j = index + 1
+            car = max(highway[index]['cars'])
+            while highway[j]['id'] < highway[index]['id'] + car and j < len(highway) - 1:
+                next_nodes.append(j)
+                j += 1
+        else:
+            next_nodes = []
+            j = index - 1
+            car = max(highway[index]['cars'])
+            while highway[j]['id'] > highway[index]['id'] - car and j >= 0:
+                next_nodes.append(j)
+                j += -1
+
+        if v[0] == end_index:
+            return v[0]
+
+        for next_node in next_nodes:
+            if highway[next_node]['explored'] == 0:
+                highway[next_node]['explored'] = 1
+                q = [next_node, v[0]]
+                queue.append(q)
+
+        i += 1
+    else:
+        return -1
 
 def main():
     for i in lines:
