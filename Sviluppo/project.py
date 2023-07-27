@@ -5,9 +5,6 @@ import cProfile
 DEBUG = os.getenv("PYLAB_DEBUG", False) == "true"
 PROFILE = os.getenv("PYLAB_PROFILE", False) == "true"
 
-# Optimizations
-PARTIAL_GRAPH = os.getenv("PYLAB_PARTIAL", False) == "true"
-
 print(f"DEBUG: {DEBUG}")
 print(f"PROFILE: {PROFILE}")
 
@@ -100,6 +97,7 @@ def search_path(stn_start, stn_end):
         if len(paths) <= 0:
             output.write("nessun percorso\n")
         else:
+            print(paths)
             string = ""
             if stn_start > stn_end:
                 string = " ".join(str(i) for i in paths)
@@ -144,10 +142,8 @@ def graph_rebuild(stn_start, stn_end):
 
     range_start = min(stn_start, stn_end)
     range_end = max(stn_start, stn_end) + 1
-    if PARTIAL_GRAPH:
-        stations = [s for s in range(range_start, range_end) if s in highway.keys()]
-    else:
-        stations = highway.keys()
+    
+    stations = [s for s in range(range_start, range_end) if s in highway.keys()]
 
     if DEBUG:
         print(f"Rebuild graph for stations: {stations}")

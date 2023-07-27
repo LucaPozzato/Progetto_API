@@ -8,15 +8,15 @@ PROFILE = os.getenv("PYLAB_PROFILE", False) == "true"
 print(f"DEBUG: {DEBUG}")
 print(f"PROFILE: {PROFILE}")
 
-file = open("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_100.txt", "r")
+file = open(sys.argv[1], "r")
 # basefile = os.path.basename("Test/archivio_test_aperti/open_100.txt")
-output = open("/Users/luca/Documents/Progetto-API/sviluppo/output.txt", "w+")
+output = open("Sviluppo/output.txt", "w+")
 lines = file.readlines()
 highway = []
 
 def add_station(station, cars):
     if len(highway) == 0:
-        stn = {'id': station, 'cars': cars, 'explored': 0}
+        stn = {'id': station, 'cars': cars, 'explored': 0, 'right_stn': [], 'left_stn': []}
         highway.append(stn)
         output.write("aggiunta\n")
     else:
@@ -28,12 +28,12 @@ def add_station(station, cars):
                 output.write("non aggiunta\n")
                 break
             else:
-                stn = {'id': station, 'cars': cars, 'explored': 0}
+                stn = {'id': station, 'cars': cars, 'explored': 0, 'right_stn': [], 'left_stn': []}
                 highway.insert(i ,stn)
                 output.write("aggiunta\n")
                 break
         if i == len(highway):
-            stn = {'id': station, 'cars': cars, 'explored': 0}
+            stn = {'id': station, 'cars': cars, 'explored': 0, 'right_stn': [], 'left_stn': []}
             highway.insert(i ,stn)
             output.write("aggiunta\n")
     return 0
@@ -108,16 +108,20 @@ def search_path(stn_start, stn_end):
                 break
             i += 1
 
-    queue = [[index, -1]]
     if stn_start == stn_end:
         output.write(str(stn_start) + "\n")
     else:
-        for i in range(index, end_index):
-            highway[i]['explored'] = 0
+        graph_rebuild(index, end_index)
+        if direction == 1:
+            queue = [[index, -1]]
+            found = bfs(end_index, queue, direction)
+        else:
+            queue = [[end_index, -1]]
+            found = bfs(index, queue, direction)
 
-        found = bfs(end_index, queue, direction)
         if found != -1:
             path = []
+            found = highway[found]['id']
             for i in range(0, len(queue)):
                 queue[i][0] = highway[queue[i][0]]['id']
                 queue[i][1] = highway[queue[i][1]]['id']
@@ -148,19 +152,9 @@ def bfs(end_index, queue, direction):
         v = queue[i]
         index = v[0]
         if direction == 1:
-            next_nodes = []
-            j = index + 1
-            car = max(highway[index]['cars'])
-            while highway[j]['id'] < highway[index]['id'] + car and j < len(highway) - 1:
-                next_nodes.append(j)
-                j += 1
+            next_nodes = highway[index]['right_stn']
         else:
-            next_nodes = []
-            j = index - 1
-            car = max(highway[index]['cars'])
-            while highway[j]['id'] > highway[index]['id'] - car and j >= 0:
-                next_nodes.append(j)
-                j += -1
+            next_nodes = highway[index]['left_stn']
 
         if v[0] == end_index:
             return v[0]
@@ -174,6 +168,31 @@ def bfs(end_index, queue, direction):
         i += 1
     else:
         return -1
+
+def graph_rebuild(stn_start, stn_end):
+    range_start = min(stn_start, stn_end)
+    range_end = max(stn_start, stn_end) + 1
+
+    for i in range(range_start, range_end):
+        highway[i]['right_stn'] = []
+        highway[i]['left_stn'] = []
+        highway[i]['explored'] = 0
+    
+    stations = [s for s in range(range_start, range_end)]
+
+    for stop in stations:
+        len_cars = len(highway[stop]['cars'])
+        if len_cars > 0:
+            car_max = max(highway[stop]['cars'])
+            # List comprehension reduces the number of alloc calls
+            if stn_start < stn_end:
+                highway[stop]['right_stn'] = [ s for s in stations if highway[s]['id'] <= highway[stop]['id'] + car_max and s > stop ]
+            else:
+                for station in stations:
+                    # if station <= stop+car_max and station > stop:
+                    #     highway[stop]['right_stn'].append(station)
+                    if highway[station]['id'] >= highway[stop]['id'] - car_max and station < stop:
+                        highway[station]['left_stn'].append(stop)
 
 def main():
     for i in lines:
