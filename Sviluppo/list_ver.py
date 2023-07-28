@@ -228,3 +228,5 @@ else:
 
 file.close()
 output.close()
+
+# for open_101 --> hash table : 2753s - lista : 223s
