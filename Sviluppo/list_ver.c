@@ -21,10 +21,10 @@ typedef struct q_str {
     int father;
 } q_str;
 
-stn *add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars);
-int del_station (stn *first_stn, int station);
+stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars);
+stn* del_station (stn *first_stn, int station, int *f);
 int add_car (stn *first_stn, int station, int car);
-int del_car (stn *first_stn, int station, int car);
+int del_car (stn *first_stn, int *new_cars, int station, int car);
 
 int main (int argc, char *argv[])
 {
@@ -34,7 +34,7 @@ int main (int argc, char *argv[])
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
-    file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_100.txt", "r");
+    file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_104.txt", "r");
     if (file_input == NULL) {
         perror("Error opening input file");
         return(0);
@@ -52,6 +52,8 @@ int main (int argc, char *argv[])
     int len_cars = 0;
     stn *first_stn = NULL;
     stn *new_stn = NULL;
+    stn *result = NULL;
+    int *new_cars = NULL;
 
     while ((line_read = getline(&line, &line_len, file_input)) != -1) {
         command = strtok(line, " ");
@@ -62,22 +64,28 @@ int main (int argc, char *argv[])
                 for (int i = 0; i < len_cars; i++) {
                     cars[i] = (int)strtol(strtok(NULL, " "), NULL, 10); 
                 }
-                new_stn = NULL;
                 new_stn = (stn *) calloc(1, sizeof(stn));
-                new_stn = add_station(first_stn, new_stn, station, cars, len_cars);
-                if (first_stn == NULL) {
-                    first_stn = new_stn;
-                }
-                if (new_stn != NULL) {
+                result = add_station(first_stn, new_stn, station, cars, len_cars);
+                if (result != NULL) {
+                    first_stn = result;
                     fprintf(file_output, "aggiunta\n");
                 }
                 else {
                     fprintf(file_output, "non aggiunta\n");
+                    free(new_stn);
+                    free(cars);
                 }
         }
         else if (strcmp(command, "demolisci-stazione") == 0) {
+            int f = 0;
             station = (int)strtol(strtok(NULL, " "), NULL, 10);
-            if (del_station(first_stn, station) == 1) {
+            result = del_station(first_stn, station, &f);
+            if (f == 1) {
+                first_stn = result;
+                fprintf(file_output, "demolita\n"); 
+            }
+            else if (result != NULL) {
+                first_stn = result;
                 fprintf(file_output, "demolita\n");
             }
             else {
@@ -97,7 +105,7 @@ int main (int argc, char *argv[])
         else if (strcmp(command, "rottama-auto") == 0) {
             station = (int)strtol(strtok(NULL, " "), NULL, 10);
             car = (int)strtol(strtok(NULL, " "), NULL, 10);
-            if (del_car(first_stn, station, car) == 1) {
+            if (del_car(first_stn, new_cars, station, car) == 1) {
                 fprintf(file_output, "rottamata\n");
             }
             else {
@@ -111,6 +119,16 @@ int main (int argc, char *argv[])
             return 0;
         }
     }
+
+    stn *curr_stn = first_stn;
+    while (curr_stn != NULL) {
+        free(curr_stn->cars);
+        free(curr_stn->prv);
+        free(curr_stn->right_stn);
+        free(curr_stn->left_stn);
+        curr_stn = curr_stn->nxt;
+    }
+
     fclose(file_input);
     fclose(file_output);
     if (line)
@@ -118,79 +136,107 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-stn *add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars) {
+stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars) {
     stn *curr_stn = first_stn;
-    if (curr_stn == NULL) {
+
+    new_stn->id = station;
+    new_stn->cars = cars;
+    new_stn->len_cars = len_cars;
+
+    if (first_stn == NULL) {
         first_stn = new_stn;
-        first_stn->id = station;
-        first_stn->cars = cars;
-        first_stn->len_cars = len_cars;
-        return new_stn;
+        return first_stn;
+    }
+    else if (first_stn->nxt == NULL && first_stn->prv == NULL) {
+        if (new_stn->id > first_stn->id) {
+            new_stn->prv = first_stn;
+            first_stn->nxt = new_stn;
+        }
+        else {
+            new_stn->nxt = first_stn;
+            first_stn->prv = new_stn;
+            first_stn = new_stn;
+        }
+        return first_stn;
+    }
+    else if (first_stn->id > new_stn->id) {
+        new_stn->nxt = first_stn;
+        first_stn->prv = new_stn;
+        first_stn = new_stn;
+        return first_stn;
     }
     else {
-        while (curr_stn != NULL) {
-            if (curr_stn->id < station) {
-                curr_stn = curr_stn->nxt;
-            }
-            else if (curr_stn->id == station) {
+        while (curr_stn->id < new_stn->id && curr_stn->nxt != NULL) {
+            if (curr_stn->id == new_stn->id) {
                 return NULL;
             }
+            curr_stn = curr_stn->nxt;
+        }
+        if (curr_stn->id == new_stn->id || curr_stn->prv->id == new_stn->id) {
+            return NULL;
+        }
+        if (curr_stn->nxt == NULL) {
+            if (curr_stn->id > new_stn->id) {
+                curr_stn->prv->nxt = new_stn;
+                new_stn->prv = curr_stn->prv;
+                curr_stn->prv = new_stn;
+                new_stn->nxt = curr_stn;
+            }
             else {
-                new_stn = (stn *) calloc(1, sizeof(stn));
-                curr_stn = curr_stn->prv;
-                curr_stn->nxt->prv = new_stn;
-                new_stn->nxt = curr_stn->nxt;
                 curr_stn->nxt = new_stn;
                 new_stn->prv = curr_stn;
-                new_stn->id = station;
-                new_stn->cars = cars;
-                new_stn->len_cars = len_cars;
-                // da sistemare va messa prima, non dopo
-                // usa ipad perchè se no è un casino
-                return new_stn;
             }
+            return first_stn;
         }
-        new_stn = (stn *) calloc(1, sizeof(stn));
-        curr_stn->nxt = new_stn;
-        new_stn->prv = curr_stn;
-        new_stn->id = station;
-        new_stn->cars = cars;
-        new_stn->len_cars = len_cars;
-        return new_stn;
+        else {
+            curr_stn->prv->nxt = new_stn;
+            new_stn->prv = curr_stn->prv;
+            curr_stn->prv = new_stn;
+            new_stn->nxt = curr_stn;
+            return first_stn;
+        }
     }
 }
 
-int del_station (stn *first_stn, int station) {
+stn* del_station (stn *first_stn, int station, int *f) {
     stn *curr_stn = first_stn;
     while (curr_stn != NULL) {
         if (curr_stn->id == station) {
-            if (curr_stn->prv != NULL) {
-                curr_stn->prv->nxt = curr_stn->nxt;
+            if (curr_stn->nxt == NULL && curr_stn->prv == NULL) {
+                free(curr_stn);
+                *f = 1;
+                first_stn = NULL;
             }
-            else {
-                curr_stn->nxt->prv = NULL;
-            }
-            if (curr_stn->nxt != NULL) {
-                curr_stn->nxt->prv = curr_stn->prv;
-            }
-            else {
+            else if (curr_stn->nxt == NULL) {
                 curr_stn->prv->nxt = NULL;
+                free(curr_stn);
             }
-            // free(curr_stn);
-            return 1;
+            else if (curr_stn->prv == NULL) {
+                curr_stn->nxt->prv = NULL;
+                first_stn = curr_stn->nxt;
+                free(curr_stn);
+            }
+            else {
+                curr_stn->nxt->prv = curr_stn->prv;
+                curr_stn->prv->nxt = curr_stn->nxt;
+                free(curr_stn);
+            }
+            return first_stn;
         }
         curr_stn = curr_stn->nxt;
     }
-    return 0;
+    return NULL;
 }
 
 int add_car (stn *first_stn, int station, int car) {
     stn *curr_stn = first_stn;
+    int len_cars = 0;
     while (curr_stn != NULL) {
         if (curr_stn->id == station) {
+            len_cars = curr_stn->len_cars;
             curr_stn->cars = (int *) realloc(curr_stn->cars, (curr_stn->len_cars + 1) * sizeof(int));
-            curr_stn->cars[curr_stn->len_cars] = car;
-            curr_stn->len_cars ++;
+            curr_stn->cars[len_cars] = car;
+            curr_stn->len_cars = len_cars + 1;
             return 1;
         }
         curr_stn = curr_stn->nxt;
@@ -198,9 +244,8 @@ int add_car (stn *first_stn, int station, int car) {
     return 0;
 }
 
-int del_car (stn *first_stn, int station, int car) {
+int del_car (stn *first_stn, int *new_cars, int station, int car) {
     stn *curr_stn = first_stn;
-    int *new_cars = NULL;
     int len_cars = 0;
     int k = 0;
     while (curr_stn != NULL) {
@@ -209,12 +254,12 @@ int del_car (stn *first_stn, int station, int car) {
                 if (curr_stn->cars[i] == car){
                     curr_stn->cars[i] = -1;
                     len_cars = curr_stn->len_cars - 1;
-                    new_cars = (int *) malloc(len_cars * sizeof(int));
+                    new_cars = (int *) calloc(len_cars, sizeof(int));
                     for (int j = 0; j < curr_stn->len_cars; j++) {
                         if (curr_stn->cars[j] != -1) {
                             new_cars[k] = curr_stn->cars[j];
+                            k++;
                         }
-                        k ++;
                     }
                     free(curr_stn->cars);
                     curr_stn->cars = new_cars;
