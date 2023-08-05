@@ -8,23 +8,27 @@ typedef struct stn
     int *cars;
     int len_cars;
     int color;
-    int *right_stn;
+    struct stn **right_stn;
     int len_right_stn;
-    int *left_stn;
+    struct stn **left_stn;
     int len_left_stn;
     struct stn *nxt;
     struct stn *prv;
 } stn;
 
 typedef struct q_str {
-    int id;
-    int father;
+    struct stn *id;
+    struct stn *father;
 } q_str;
 
 stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars);
 stn* del_station (stn *first_stn, int station, int *f);
 int add_car (stn *first_stn, int station, int car);
 int del_car (stn *first_stn, int *new_cars, int station, int car);
+int search_path (int stn_start, int stn_end);
+int graph_rebuild (stn *start_stn, stn *end_stn);
+int bfs (stn *end_stn, q_str *queue, int len_queue, int direction);
+int max_car (int *cars, int len_cars);
 
 int main (int argc, char *argv[])
 {
@@ -34,7 +38,7 @@ int main (int argc, char *argv[])
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
-    file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_104.txt", "r");
+    file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_50.txt", "r");
     if (file_input == NULL) {
         perror("Error opening input file");
         return(0);
@@ -54,6 +58,7 @@ int main (int argc, char *argv[])
     stn *new_stn = NULL;
     stn *result = NULL;
     int *new_cars = NULL;
+    int f = 0;
 
     while ((line_read = getline(&line, &line_len, file_input)) != -1) {
         command = strtok(line, " ");
@@ -77,7 +82,6 @@ int main (int argc, char *argv[])
                 }
         }
         else if (strcmp(command, "demolisci-stazione") == 0) {
-            int f = 0;
             station = (int)strtol(strtok(NULL, " "), NULL, 10);
             result = del_station(first_stn, station, &f);
             if (f == 1) {
@@ -274,6 +278,116 @@ int del_car (stn *first_stn, int *new_cars, int station, int car) {
     return 0;
 }
 
+int graph_rebuild (stn *start_stn, stn *end_stn) {
+    stn *range_start = NULL;
+    stn *range_end = NULL;
+    stn *curr_stn = NULL;
+    stn **stations = NULL;
+    int len_stations = 0;
+
+    if (start_stn->id < end_stn->id) {
+        range_start = start_stn;
+        curr_stn = range_start;
+        range_end = end_stn;
+    }
+    else {
+        range_start = end_stn;
+        curr_stn = range_start;
+        range_end = start_stn;
+    }
+    while (curr_stn->id < range_end->id) {
+        curr_stn->color = 0;
+        free(curr_stn->right_stn);
+        free(curr_stn->left_stn);
+        curr_stn = curr_stn->nxt;
+        len_stations++;
+    }
+
+    stations = (stn **) calloc(len_stations, sizeof(stn *));
+    curr_stn = range_start;
+    for (int i = 0; i <= len_stations; i++) {
+        stations[i] = curr_stn;
+        curr_stn = curr_stn->nxt;
+    }
+
+    int len_cars = 0;
+    int car_m;
+    int len = 0;
+
+    for (int i = 0; i <= len_stations; i++) {
+        len_cars = stations[i]->len_cars;
+        if (len_cars > 0) {
+            car_m = max_car(stations[i]->cars, len_cars);
+            if (start_stn->id < end_stn->id) {
+                for (int j = 0; j <= len_stations; j++) {
+                    if (stations[j]->id <= stations[i]->id + car_m && stations[j]->id > stations[i]->id) {
+                        len = stations[i]->len_right_stn;
+                        stations[i]->right_stn = (stn **) calloc(len + 1, sizeof(stn *));
+                        stations[i]->right_stn[len] = stations[j];
+                        stations[i]->len_right_stn++;
+                    }
+                }
+            }
+            else{
+                for (int j = 0; j <= len_stations; j++) {
+                    if (stations[j]->id >= stations[i]->id - car_m && stations[j]->id < stations[i]->id) {
+                        len = stations[j]->len_right_stn;
+                        stations[j]->right_stn = (stn **) calloc(len + 1, sizeof(stn *));
+                        stations[j]->right_stn[len] = stations[i];
+                        stations[j]->len_right_stn++;
+                    }
+                }
+            }
+        }
+    }
+    return 1;
+}
+
+int search_path (int stn_start, int stn_end) {
+    return 0;
+}
+
+int bfs (stn *end_stn, q_str *queue, int len_queue, int direction) {
+    stn **next_nodes = NULL;
+    int len_next_nodes = 0;
+    stn *index = NULL;
+    q_str *v;
+    int i = 0;
+    while (i < len_queue) {
+        v = queue + i;
+        index = v->id;
+        if (direction == 1) {
+            next_nodes = index->right_stn;
+            len_next_nodes = index->len_right_stn;
+        }
+        else {
+            next_nodes = index->left_stn;
+            len_next_nodes = index->len_left_stn;
+        }
+        if (v->id == end_stn) {
+            return 1;
+        }
+        for (int j = 0; j < len_next_nodes; j++) {
+            if (next_nodes[j]->color == 0) {
+                next_nodes[j]->color = 1;
+                queue = (q_str *) realloc(queue, (len_queue + 1) * sizeof(q_str));
+                (queue + len_queue)->id = next_nodes[j];
+                (queue + len_next_nodes)->father = v->id;
+            }
+        }
+        i++;
+    }
+    return -1;
+}
+
+int max_car (int *cars, int len_cars) {
+    int car_m = 0;
+    for (int i = 0; i < len_cars; i++) {
+        if (cars[i] > car_m) 
+            car_m = cars[i];
+    }
+    return car_m;
+}
 
 // ./test_gen_2023_macos -s 3000 -c 20 -C 100 -r 30
 // Test/test_gen_2023/test_gen_2023_macos -s 5000 -c 20 -C 200 -r 30 > Test/archivio_test_aperti/open_200.txt
