@@ -10,7 +10,9 @@ typedef struct stn
     int color;
     struct stn **right_stn;
     int len_right_stn;
+    int right_index;
     struct stn **left_stn;
+    int left_index;
     int len_left_stn;
     struct stn *nxt;
     struct stn *prv;
@@ -350,17 +352,23 @@ int graph_rebuild (stn *start_stn, stn *end_stn) {
         range_end = start_stn;
     }
     while (curr_stn != NULL && curr_stn->id <= range_end->id) {
-        curr_stn->color = 0;
-        free(curr_stn->right_stn);
-        free(curr_stn->left_stn);
-        curr_stn->right_stn = NULL;
-        curr_stn->left_stn = NULL;
-        curr_stn->len_right_stn = 0;
-        curr_stn->len_left_stn = 0;
+        if (start_stn->id < end_stn->id) {
+            curr_stn->color = 0;
+            free(curr_stn->right_stn);
+            curr_stn->right_stn = (stn **) calloc(32, sizeof(stn *));
+            curr_stn->right_index = 0;
+            curr_stn->len_right_stn = 32;
+        }
+        else {
+            curr_stn->color = 0;
+            free(curr_stn->left_stn);
+            curr_stn->left_stn = (stn **) calloc(32, sizeof(stn *));
+            curr_stn->left_index = 0;
+            curr_stn->len_left_stn = 32;
+        }
         curr_stn = curr_stn->nxt;
         len_stations++;
     }
-
     stations = (stn **) calloc(len_stations, sizeof(stn *));
     curr_stn = range_start;
     for (int i = 0; i < len_stations; i++) {
@@ -378,7 +386,7 @@ int graph_rebuild (stn *start_stn, stn *end_stn) {
 
     int len_cars = 0;
     int car_m;
-    int len = 0;
+    int index = 0;
 
     for (int i = 0; i < len_stations; i++) {
         len_cars = stations[i]->len_cars;
@@ -387,20 +395,26 @@ int graph_rebuild (stn *start_stn, stn *end_stn) {
             if (start_stn->id < end_stn->id) {
                 for (int j = 0; j < len_stations; j++) {
                     if (stations[j]->id <= stations[i]->id + car_m && stations[j]->id > stations[i]->id) {
-                        len = stations[i]->len_right_stn;
-                        stations[i]->right_stn = (stn **) realloc(stations[i]->right_stn, (len + 1) * sizeof(stn *));
-                        stations[i]->right_stn[len] = stations[j];
-                        stations[i]->len_right_stn++;
+                        index = stations[i]->right_index;
+                        if (index >= stations[i]->len_right_stn - 1) {
+                            stations[i]->len_right_stn *= 2;
+                            stations[i]->right_stn = (stn **) realloc(stations[i]->right_stn, stations[i]->len_right_stn * sizeof(stn *));
+                        }
+                        stations[i]->right_stn[index] = stations[j];
+                        stations[i]->right_index++;
                     }
                 }
             }
             else{
                 for (int j = 0; j < len_stations; j++) {
                     if (stations[j]->id >= stations[i]->id - car_m && stations[j]->id < stations[i]->id) {
-                        len = stations[j]->len_left_stn;
-                        stations[j]->left_stn = (stn **) realloc(stations[j]->left_stn, (len + 1) * sizeof(stn *));
-                        stations[j]->left_stn[len] = stations[i];
-                        stations[j]->len_left_stn++;
+                        index = stations[j]->left_index;
+                        if (index >= stations[j]->len_left_stn - 1) {
+                            stations[j]->len_left_stn *= 2;
+                            stations[j]->left_stn = (stn **) realloc(stations[j]->left_stn, stations[j]->len_left_stn * sizeof(stn *));
+                        }
+                        stations[j]->left_stn[index] = stations[i];
+                        stations[j]->left_index++;
                     }
                 }
             }
@@ -409,16 +423,16 @@ int graph_rebuild (stn *start_stn, stn *end_stn) {
     #if debug_graph
         for (int i = 0; i < len_stations; i++) {
             printf("stn: %d -> ", stations[i]->id);
-            if (stations[i]->len_right_stn != 0) {
+            if (stations[i]->right_index != 0) {
                 printf("right_stn: ");
-                for (int j = 0; j < stations[i]->len_right_stn; j++) {
+                for (int j = 0; j < stations[i]->right_index; j++) {
                     printf("%d ", stations[i]->right_stn[j]->id);
                 }
                 printf("\n");
             }
             else {
                 printf("left_stn: ");
-                for (int j = 0; j < stations[i]->len_left_stn; j++) {
+                for (int j = 0; j < stations[i]->left_index; j++) {
                     printf("%d ", stations[i]->left_stn[j]->id);
                 }
                 printf("\n");
@@ -551,11 +565,11 @@ int bfs (stn *end_stn, q_str *queue, int len_queue, int direction) {
         index = v->id;
         if (direction == 1) {
             next_nodes = index->right_stn;
-            len_next_nodes = index->len_right_stn;
+            len_next_nodes = index->right_index;
         }
         else {
             next_nodes = index->left_stn;
-            len_next_nodes = index->len_left_stn;
+            len_next_nodes = index->left_index;
         }
         if (v->id == end_stn) {
             return i + 1;
