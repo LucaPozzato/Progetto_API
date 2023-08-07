@@ -1,7 +1,7 @@
 #!/bin/bash
 
 rm results_test.txt
-gcc -Dfile -Wall -Werror -std=gnu11 -O2 -lm Sviluppo/list_ver.c -o Sviluppo/list_ver
+gcc -Dlocal -Dfile -Wall -Werror -std=gnu11 -O2 -lm Sviluppo/list_ver.c -o Sviluppo/list_ver
 
 for i in {1..111}
 do

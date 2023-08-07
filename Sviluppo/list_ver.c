@@ -26,7 +26,7 @@ int add_car (stn *first_stn, int station, int car);
 int del_car (stn *first_stn, int *new_cars, int station, int car);
 int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_stations);
 int bfs (stn *end_stn, q_str *queue, int direction);
-int rebuild_graph (stn *start_stn, stn *end_stn);
+int rebuild_graph (stn *start_stn, stn *end_stn, stn **next_nodes);
 int max_car (int *cars, int len_cars);
 
 int main (int argc, char *argv[])
@@ -177,11 +177,15 @@ int main (int argc, char *argv[])
     }
 
     stn *curr_stn = first_stn;
-    while (curr_stn != NULL) {
+    while (curr_stn->nxt != NULL) {
         free(curr_stn->cars);
+        free(curr_stn->left_stn);
         free(curr_stn->prv);
         curr_stn = curr_stn->nxt;
     }
+    free(curr_stn->cars);
+    free(curr_stn->left_stn);
+    free(curr_stn);
 
     fclose(file_input);
     fclose(file_output);
@@ -367,7 +371,6 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
             }
             curr_stn = curr_stn->nxt;
         }
-        rebuild_graph(strt_stn, nd_stn);
     }
 
     q_str *queue = NULL;
@@ -461,8 +464,8 @@ int bfs (stn *end_stn, q_str *queue, int direction) {
             }
         }
         else {
-            next_nodes = index->left_stn;
-            len_next_nodes = index->left_index;
+            next_nodes = (stn **) calloc(3500, sizeof(stn *));
+            len_next_nodes = rebuild_graph(index, end_stn, next_nodes);
             if (len_next_nodes > 0) {
                 for (int j = 0; j < len_next_nodes; j++) {
                     if (next_nodes[j]->color == 0) {
@@ -473,60 +476,33 @@ int bfs (stn *end_stn, q_str *queue, int direction) {
                     }
                 }
             }
+            free(next_nodes);
         }
         i++;
     }
     return -1;
 }
 
-int rebuild_graph (stn *start_stn, stn *end_stn) {
-    stn *range_start = NULL;
-    stn *range_end = NULL;
+int rebuild_graph (stn *start_stn, stn *end_stn, stn **next_nodes) {
     stn *curr_stn = NULL;
-    stn **stations = NULL;
-    int len_stations = 0;
-
-    range_start = end_stn;
-    curr_stn = range_start;
-    range_end = start_stn;
-    
-    while (curr_stn != NULL && curr_stn->id <= range_end->id) {
-        free(curr_stn->left_stn);
-        curr_stn->left_stn = (stn **) calloc(32, sizeof(stn *));
-        curr_stn->left_index = 0;
-        curr_stn->len_left = 32;
-        curr_stn = curr_stn->nxt;
-        len_stations++;
-    }
-    stations = (stn **) calloc(len_stations, sizeof(stn *));
-    curr_stn = range_start;
-    for (int i = 0; i < len_stations; i++) {
-        stations[i] = curr_stn;
-        curr_stn = curr_stn->nxt;
-    }
+    curr_stn = start_stn;
 
     int len_cars = 0;
     int car_m;
     int index = 0;
 
-    for (int i = 0; i < len_stations; i++) {
-        len_cars = stations[i]->len_cars;
+    while (curr_stn != NULL && curr_stn->id <= end_stn->id) {
+        len_cars = curr_stn->len_cars;
         if (len_cars > 0) {
-            car_m = max_car(stations[i]->cars, len_cars);
-            for (int j = 0; j < len_stations; j++) {
-                if (stations[j]->id >= stations[i]->id - car_m && stations[j]->id < stations[i]->id) {
-                    index = stations[j]->left_index;
-                    if (index >= stations[j]->len_left - 1) {
-                        stations[j]->len_left *= 2;
-                        stations[j]->left_stn = (stn **) realloc(stations[j]->left_stn, stations[j]->len_left * sizeof(stn *));
-                    }
-                    stations[j]->left_stn[index] = stations[i];
-                    stations[j]->left_index++;
-                }
+            car_m = max_car(curr_stn->cars, len_cars);
+            if (start_stn->id >= curr_stn->id - car_m && start_stn->id < curr_stn->id) {
+                next_nodes[index] = curr_stn;
+                index++;
             }
+            curr_stn = curr_stn->nxt;
         }
     }
-    return 1;
+    return index;
 }
 
 int max_car (int *cars, int len_cars) {
