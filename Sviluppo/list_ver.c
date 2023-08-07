@@ -8,9 +8,6 @@ typedef struct stn
     int *cars;
     int len_cars;
     int color;
-    struct stn **left_stn;
-    int len_left;
-    int left_index;
     struct stn *nxt;
     struct stn *prv;
 } stn;
@@ -169,6 +166,7 @@ int main (int argc, char *argv[])
                 else {
                     fprintf(file_output, "nessun percorso\n");
                 }
+                free(path);
             }
         }
         else {
@@ -177,15 +175,11 @@ int main (int argc, char *argv[])
     }
 
     stn *curr_stn = first_stn;
-    while (curr_stn->nxt != NULL) {
+    while (curr_stn != NULL) {
         free(curr_stn->cars);
-        free(curr_stn->left_stn);
         free(curr_stn->prv);
         curr_stn = curr_stn->nxt;
     }
-    free(curr_stn->cars);
-    free(curr_stn->left_stn);
-    free(curr_stn);
 
     fclose(file_input);
     fclose(file_output);
@@ -261,22 +255,26 @@ stn* del_station (stn *first_stn, int station, int *f) {
     while (curr_stn != NULL) {
         if (curr_stn->id == station) {
             if (curr_stn->nxt == NULL && curr_stn->prv == NULL) {
+                free(curr_stn->cars);
                 free(curr_stn);
                 *f = 1;
                 first_stn = NULL;
             }
             else if (curr_stn->nxt == NULL) {
                 curr_stn->prv->nxt = NULL;
+                free(curr_stn->cars);
                 free(curr_stn);
             }
             else if (curr_stn->prv == NULL) {
                 curr_stn->nxt->prv = NULL;
                 first_stn = curr_stn->nxt;
+                free(curr_stn->cars);
                 free(curr_stn);
             }
             else {
                 curr_stn->nxt->prv = curr_stn->prv;
                 curr_stn->prv->nxt = curr_stn->nxt;
+                free(curr_stn->cars);
                 free(curr_stn);
             }
             return first_stn;
@@ -417,10 +415,10 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
             }
         #endif
         free(queue);
-        queue = NULL;
         return len_path;
     }
     else {
+        free(queue);
         return 0;
     }
 }
@@ -428,8 +426,6 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
 int bfs (stn *end_stn, q_str *queue, int direction) {
     stn *index = NULL;
     stn *curr_stn = NULL;
-    stn **next_nodes = NULL;
-    int len_next_nodes = 0;
     q_str *v;
     int len_queue = 1;
     int i = 0;
@@ -452,57 +448,38 @@ int bfs (stn *end_stn, q_str *queue, int direction) {
             curr_stn = index;
             if (curr_stn->nxt != NULL) {
                 curr_stn = index->nxt;
-                while (curr_stn != NULL && curr_stn->id <= index->id + max_car(index->cars, index->len_cars) && curr_stn->id > index->id) {
-                    if (curr_stn->color == 0) {
-                        curr_stn->color = 1;
-                        (queue + len_queue)->id = curr_stn;
-                        (queue + len_queue)->father = index;
-                        len_queue++;
+                if (index->len_cars > 0) {
+                    while (curr_stn != NULL && curr_stn->id <= index->id + max_car(index->cars, index->len_cars) && curr_stn->id > index->id) {
+                        if (curr_stn->color == 0) {
+                            curr_stn->color = 1;
+                            (queue + len_queue)->id = curr_stn;
+                            (queue + len_queue)->father = index;
+                            len_queue++;
+                        }
+                        curr_stn = curr_stn->nxt;
                     }
-                    curr_stn = curr_stn->nxt;
                 }
             }
         }
         else {
-            next_nodes = (stn **) calloc(3500, sizeof(stn *));
-            len_next_nodes = rebuild_graph(index, end_stn, next_nodes);
-            if (len_next_nodes > 0) {
-                for (int j = 0; j < len_next_nodes; j++) {
-                    if (next_nodes[j]->color == 0) {
-                        next_nodes[j]->color = 1;
-                        (queue + len_queue)->id = next_nodes[j];
-                        (queue + len_queue)->father = v->id;
-                        len_queue++;
+            curr_stn = index;
+            while (curr_stn != NULL && curr_stn->id <= end_stn->id) {
+                if (curr_stn->len_cars > 0) {
+                    if (index->id >= curr_stn->id - max_car(curr_stn->cars, curr_stn->len_cars) && index->id < curr_stn->id) {
+                        if (curr_stn->color == 0) {
+                            curr_stn->color = 1;
+                            (queue + len_queue)->id = curr_stn;
+                            (queue + len_queue)->father = index;
+                            len_queue++;
+                        }
                     }
                 }
+                curr_stn = curr_stn->nxt;
             }
-            free(next_nodes);
         }
         i++;
     }
     return -1;
-}
-
-int rebuild_graph (stn *start_stn, stn *end_stn, stn **next_nodes) {
-    stn *curr_stn = NULL;
-    curr_stn = start_stn;
-
-    int len_cars = 0;
-    int car_m;
-    int index = 0;
-
-    while (curr_stn != NULL && curr_stn->id <= end_stn->id) {
-        len_cars = curr_stn->len_cars;
-        if (len_cars > 0) {
-            car_m = max_car(curr_stn->cars, len_cars);
-            if (start_stn->id >= curr_stn->id - car_m && start_stn->id < curr_stn->id) {
-                next_nodes[index] = curr_stn;
-                index++;
-            }
-            curr_stn = curr_stn->nxt;
-        }
-    }
-    return index;
 }
 
 int max_car (int *cars, int len_cars) {
@@ -514,12 +491,5 @@ int max_car (int *cars, int len_cars) {
     return car_m;
 }
 
-// ./test_gen_2023_macos -s 3000 -c 20 -C 100 -r 30
-// Test/test_gen_2023/test_gen_2023_macos -s 5000 -c 20 -C 200 -r 30 > Test/archivio_test_aperti/open_200.txt
-
-// open_104 / open_105 ha stesso tempo di parsing del verificatore --> open_104->612s / open_105->296s --> 104 sono meno istruzioni e ci impiega il triplo del tempo
-
 // -> implementare cars come una lista
-// -> fix path calloc
 // -> fix memory leaks
-// -> better memory usage when freeing immediately after pianifica percorso
