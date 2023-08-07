@@ -603,6 +603,10 @@ int max_car (int *cars, int len_cars) {
 
 // open_104 / open_105 ha stesso tempo di parsing del verificatore --> open_104->612s / open_105->296s --> 104 sono meno istruzioni e ci impiega il triplo del tempo
 
-// miglioramenti -> implementare cars come una lista
-
-// fix return queue otherwise is empty
+// -> implementare cars come una lista
+// -> implementare stn_right or stn_left come lista
+// -> non serve rifare grafo per stn_right, si puô fare tutto in bfs
+// -> fix path calloc
+// -> fix memory leaks
+// -> better memory usage when freeing immediately after pianifica percorso
+// -> fix queue alloc, smaller size than n^2
