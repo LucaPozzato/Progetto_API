@@ -8,12 +8,6 @@ typedef struct stn
     int *cars;
     int len_cars;
     int color;
-    struct stn **right_stn;
-    int len_right_stn;
-    int right_index;
-    struct stn **left_stn;
-    int left_index;
-    int len_left_stn;
     struct stn *nxt;
     struct stn *prv;
 } stn;
@@ -32,9 +26,8 @@ stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_
 stn* del_station (stn *first_stn, int station, int *f);
 int add_car (stn *first_stn, int station, int car);
 int del_car (stn *first_stn, int *new_cars, int station, int car);
-int search_path (stn *first_stn, int stn_start, int stn_end, int *path);
-int graph_rebuild (stn *start_stn, stn *end_stn);
-int bfs (stn *end_stn, q_str *queue, int len_queue, int direction);
+int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_stations);
+int bfs (stn *end_stn, q_str *queue, int direction);
 int max_car (int *cars, int len_cars);
 
 int main (int argc, char *argv[])
@@ -45,7 +38,7 @@ int main (int argc, char *argv[])
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
-    #if local
+    // #if local
         #if file
         file_input = fopen(argv[1], "r");
         if (file_input == NULL) {
@@ -58,7 +51,7 @@ int main (int argc, char *argv[])
             return(0);
         }
         #else
-        file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_65.txt", "r");
+        file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_100.txt", "r");
         if (file_input == NULL) {
             perror("Error opening input file");
             return(0);
@@ -69,10 +62,10 @@ int main (int argc, char *argv[])
             return(0);
         }
         #endif
-    #else
-        file_input = stdin;
-        file_output = stdout;
-    #endif
+    // #else
+    //     file_input = stdin;
+    //     file_output = stdout;
+    // #endif
 
     char *command = NULL;
     int station = 0;
@@ -87,6 +80,7 @@ int main (int argc, char *argv[])
     int *path = NULL;
     int len_path = 0;
     int f = 0;
+    int n_stations = 0;
 
     while ((line_read = getline(&line, &line_len, file_input)) != -1) {
         command = strtok(line, " ");
@@ -102,6 +96,7 @@ int main (int argc, char *argv[])
                 if (result != NULL) {
                     first_stn = result;
                     fprintf(file_output, "aggiunta\n");
+                    n_stations++;
                 }
                 else {
                     fprintf(file_output, "non aggiunta\n");
@@ -116,10 +111,12 @@ int main (int argc, char *argv[])
             if (f == 1) {
                 first_stn = result;
                 fprintf(file_output, "demolita\n"); 
+                n_stations--;
             }
             else if (result != NULL) {
                 first_stn = result;
                 fprintf(file_output, "demolita\n");
+                n_stations--;
             }
             else {
                 fprintf(file_output, "non demolita\n");
@@ -155,7 +152,7 @@ int main (int argc, char *argv[])
             else {
                 path = (int *) calloc(100, sizeof(int));
                 // fix calloc of 100
-                len_path = search_path(first_stn, station, destination, path);
+                len_path = search_path(first_stn, station, destination, path, n_stations);
                 if (len_path != 0) {
                     if (station > destination) {
                         for (int i = 0; i < len_path - 1; i++) {
@@ -184,8 +181,6 @@ int main (int argc, char *argv[])
     while (curr_stn != NULL) {
         free(curr_stn->cars);
         free(curr_stn->prv);
-        free(curr_stn->right_stn);
-        free(curr_stn->left_stn);
         curr_stn = curr_stn->nxt;
     }
 
@@ -334,118 +329,8 @@ int del_car (stn *first_stn, int *new_cars, int station, int car) {
     return 0;
 }
 
-int graph_rebuild (stn *start_stn, stn *end_stn) {
-    stn *range_start = NULL;
-    stn *range_end = NULL;
-    stn *curr_stn = NULL;
-    stn **stations = NULL;
-    int len_stations = 0;
-
-    if (start_stn->id < end_stn->id) {
-        range_start = start_stn;
-        curr_stn = range_start;
-        range_end = end_stn;
-    }
-    else {
-        range_start = end_stn;
-        curr_stn = range_start;
-        range_end = start_stn;
-    }
-    while (curr_stn != NULL && curr_stn->id <= range_end->id) {
-        if (start_stn->id < end_stn->id) {
-            curr_stn->color = 0;
-            free(curr_stn->right_stn);
-            curr_stn->right_stn = (stn **) calloc(32, sizeof(stn *));
-            curr_stn->right_index = 0;
-            curr_stn->len_right_stn = 32;
-        }
-        else {
-            curr_stn->color = 0;
-            free(curr_stn->left_stn);
-            curr_stn->left_stn = (stn **) calloc(32, sizeof(stn *));
-            curr_stn->left_index = 0;
-            curr_stn->len_left_stn = 32;
-        }
-        curr_stn = curr_stn->nxt;
-        len_stations++;
-    }
-    stations = (stn **) calloc(len_stations, sizeof(stn *));
-    curr_stn = range_start;
-    for (int i = 0; i < len_stations; i++) {
-        stations[i] = curr_stn;
-        curr_stn = curr_stn->nxt;
-    }
-    #if debug_graph
-        printf("percorso: %d -> %d\n\n", range_start->id, range_end->id);
-        printf("stations: ");
-        for (int i = 0; i < len_stations; i++) {
-            printf("%d ", stations[i]->id);
-        }
-        printf("\n\n");
-    #endif
-
-    int len_cars = 0;
-    int car_m;
-    int index = 0;
-
-    for (int i = 0; i < len_stations; i++) {
-        len_cars = stations[i]->len_cars;
-        if (len_cars > 0) {
-            car_m = max_car(stations[i]->cars, len_cars);
-            if (start_stn->id < end_stn->id) {
-                for (int j = 0; j < len_stations; j++) {
-                    if (stations[j]->id <= stations[i]->id + car_m && stations[j]->id > stations[i]->id) {
-                        index = stations[i]->right_index;
-                        if (index >= stations[i]->len_right_stn - 1) {
-                            stations[i]->len_right_stn *= 2;
-                            stations[i]->right_stn = (stn **) realloc(stations[i]->right_stn, stations[i]->len_right_stn * sizeof(stn *));
-                        }
-                        stations[i]->right_stn[index] = stations[j];
-                        stations[i]->right_index++;
-                    }
-                }
-            }
-            else{
-                for (int j = 0; j < len_stations; j++) {
-                    if (stations[j]->id >= stations[i]->id - car_m && stations[j]->id < stations[i]->id) {
-                        index = stations[j]->left_index;
-                        if (index >= stations[j]->len_left_stn - 1) {
-                            stations[j]->len_left_stn *= 2;
-                            stations[j]->left_stn = (stn **) realloc(stations[j]->left_stn, stations[j]->len_left_stn * sizeof(stn *));
-                        }
-                        stations[j]->left_stn[index] = stations[i];
-                        stations[j]->left_index++;
-                    }
-                }
-            }
-        }
-    }
-    #if debug_graph
-        for (int i = 0; i < len_stations; i++) {
-            printf("stn: %d -> ", stations[i]->id);
-            if (stations[i]->right_index != 0) {
-                printf("right_stn: ");
-                for (int j = 0; j < stations[i]->right_index; j++) {
-                    printf("%d ", stations[i]->right_stn[j]->id);
-                }
-                printf("\n");
-            }
-            else {
-                printf("left_stn: ");
-                for (int j = 0; j < stations[i]->left_index; j++) {
-                    printf("%d ", stations[i]->left_stn[j]->id);
-                }
-                printf("\n");
-            }
-        }
-        printf("\n");
-    #endif
-    return 1;
-}
-
-int search_path (stn *first_stn, int stn_start, int stn_end, int *path) {
+int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_stations) {
     int direction = 0;
-    int stn_count = 0;
 
     if (stn_start < stn_end) {
         direction = 1;
@@ -460,6 +345,7 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path) {
 
     if (direction == 1) {
         while (curr_stn != NULL) {
+            curr_stn->color = 0;
             if (curr_stn->id == stn_start) {
                 strt_stn = curr_stn;
             }
@@ -468,11 +354,11 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path) {
                 break;
             }
             curr_stn = curr_stn->nxt;
-            stn_count++;
         }
     }
     else {
         while (curr_stn != NULL) {
+            curr_stn->color = 0;
             if (curr_stn->id == stn_end) {
                 nd_stn = curr_stn;
             }
@@ -481,24 +367,17 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path) {
                 break;
             }
             curr_stn = curr_stn->nxt;
-            stn_count++;
         }
     }
 
-    graph_rebuild(strt_stn, nd_stn);
     q_str *queue = NULL;
-    int len_queue = 1;
-    queue = (q_str *) calloc(stn_count * stn_count, sizeof(q_str));
-    if (direction == 1) {
-        queue->id = strt_stn;
-        queue->father = NULL;
-        len_queue = bfs(nd_stn, queue, len_queue, direction);
-    }
-    else {
-        queue->id = nd_stn;
-        queue->father = NULL;
-        len_queue = bfs(strt_stn, queue, len_queue, direction);
-    }
+    int len_queue = 0;
+    queue = (q_str *) calloc(n_stations, sizeof(q_str));
+
+    queue->id = strt_stn;
+    queue->father = NULL;
+    len_queue = bfs(nd_stn, queue, direction);
+
     if (len_queue != -1) {
         iq_str *int_queue = (iq_str *) calloc(len_queue, sizeof(iq_str));
         for (int i = 0; i < len_queue; i++) {
@@ -512,20 +391,8 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path) {
         }
         free(queue);
         queue = NULL;
-        #if debug_queue
-            for (int i = 0; i < len_queue; i++) {
-                printf("[%d, %d]\n", (int_queue + i)->id, (int_queue + i)->father);
-            }
-            printf("\n");
-        #endif
         int len_path = 0;
-        int stn = 0;
-        if (direction == 1) {
-            stn = stn_end;
-        }
-        else {
-            stn = stn_start;
-        }
+        int stn = stn_end;
         for (int i = len_queue - 1; i >= 0; i--) {
             if ((int_queue + i)->id == stn) {
                 path[len_path] = stn;
@@ -554,33 +421,53 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path) {
     }
 }
 
-int bfs (stn *end_stn, q_str *queue, int len_queue, int direction) {
-    stn **next_nodes = NULL;
-    int len_next_nodes = 0;
+int bfs (stn *end_stn, q_str *queue, int direction) {
     stn *index = NULL;
+    stn *curr_stn = NULL;
     q_str *v;
+    int len_queue = 1;
     int i = 0;
     while (i < len_queue) {
         v = queue + i;
         index = v->id;
-        if (direction == 1) {
-            next_nodes = index->right_stn;
-            len_next_nodes = index->right_index;
-        }
-        else {
-            next_nodes = index->left_stn;
-            len_next_nodes = index->left_index;
-        }
-        if (v->id == end_stn) {
+        #if debug_queue
+            if ((queue + i)->father != NULL) {
+                printf("[%d, %d]", (queue + i)->id->id, (queue + i)->father->id);
+            }
+            else {
+                printf("[%d, %d]", (queue + i)->id->id, -1);
+            }
+            printf("\n");
+        #endif
+        if (index == end_stn) {
             return i + 1;
         }
-        if (len_next_nodes > 0) {
-            for (int j = 0; j < len_next_nodes; j++) {
-                if (next_nodes[j]->color == 0) {
-                    next_nodes[j]->color = 1;
-                    (queue + len_queue)->id = next_nodes[j];
-                    (queue + len_queue)->father = v->id;
+        if (direction == 1) {
+            curr_stn = index->nxt;
+            while (curr_stn != NULL && curr_stn->id <= index->id + max_car(index->cars, index->len_cars) && curr_stn->id > index->id) {
+                if (curr_stn->color == 0) {
+                    curr_stn->color = 1;
+                    (queue + len_queue)->id = curr_stn;
+                    (queue + len_queue)->father = index;
                     len_queue++;
+                }
+                curr_stn = curr_stn->nxt;
+            }
+        }
+        else {
+            curr_stn = index->prv;
+            while (curr_stn != NULL && curr_stn->id >= index->id - max_car(index->cars, index->len_cars) && curr_stn->id < index->id) {
+                curr_stn = curr_stn->prv;
+            }
+            if (curr_stn != NULL) {
+                while (curr_stn->id < index->id) {
+                    if (curr_stn->color == 0) {
+                        curr_stn->color = 1;
+                        (queue + len_queue)->id = curr_stn;
+                        (queue + len_queue)->father = index;
+                        len_queue++;
+                    }
+                    curr_stn = curr_stn->nxt;
                 }
             }
         }
@@ -604,9 +491,6 @@ int max_car (int *cars, int len_cars) {
 // open_104 / open_105 ha stesso tempo di parsing del verificatore --> open_104->612s / open_105->296s --> 104 sono meno istruzioni e ci impiega il triplo del tempo
 
 // -> implementare cars come una lista
-// -> implementare stn_right or stn_left come lista
-// -> non serve rifare grafo per stn_right, si puô fare tutto in bfs
 // -> fix path calloc
 // -> fix memory leaks
 // -> better memory usage when freeing immediately after pianifica percorso
-// -> fix queue alloc, smaller size than n^2
