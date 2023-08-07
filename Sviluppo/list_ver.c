@@ -38,7 +38,7 @@ int main (int argc, char *argv[])
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
-    // #if local
+    #if local
         #if file
         file_input = fopen(argv[1], "r");
         if (file_input == NULL) {
@@ -62,10 +62,10 @@ int main (int argc, char *argv[])
             return(0);
         }
         #endif
-    // #else
-    //     file_input = stdin;
-    //     file_output = stdout;
-    // #endif
+    #else
+        file_input = stdin;
+        file_output = stdout;
+    #endif
 
     char *command = NULL;
     int station = 0;
@@ -154,18 +154,10 @@ int main (int argc, char *argv[])
                 // fix calloc of 100
                 len_path = search_path(first_stn, station, destination, path, n_stations);
                 if (len_path != 0) {
-                    if (station > destination) {
-                        for (int i = 0; i < len_path - 1; i++) {
-                            fprintf(file_output, "%d ", path[i]);
-                        }
-                        fprintf(file_output, "%d\n", path[len_path - 1]);
+                    for (int i = len_path - 1; i > 0; i--) {
+                        fprintf(file_output, "%d ", path[i]);
                     }
-                    else {
-                        for (int i = len_path - 1; i > 0; i--) {
-                            fprintf(file_output, "%d ", path[i]);
-                        }
-                        fprintf(file_output, "%d\n", path[0]);     
-                    }
+                    fprintf(file_output, "%d\n", path[0]);
                 }
                 else {
                     fprintf(file_output, "nessun percorso\n");
@@ -443,23 +435,30 @@ int bfs (stn *end_stn, q_str *queue, int direction) {
             return i + 1;
         }
         if (direction == 1) {
-            curr_stn = index->nxt;
-            while (curr_stn != NULL && curr_stn->id <= index->id + max_car(index->cars, index->len_cars) && curr_stn->id > index->id) {
-                if (curr_stn->color == 0) {
-                    curr_stn->color = 1;
-                    (queue + len_queue)->id = curr_stn;
-                    (queue + len_queue)->father = index;
-                    len_queue++;
+            curr_stn = index;
+            if (curr_stn->nxt != NULL) {
+                curr_stn = index->nxt;
+                while (curr_stn != NULL && curr_stn->id <= index->id + max_car(index->cars, index->len_cars) && curr_stn->id > index->id) {
+                    if (curr_stn->color == 0) {
+                        curr_stn->color = 1;
+                        (queue + len_queue)->id = curr_stn;
+                        (queue + len_queue)->father = index;
+                        len_queue++;
+                    }
+                    curr_stn = curr_stn->nxt;
                 }
-                curr_stn = curr_stn->nxt;
             }
         }
         else {
-            curr_stn = index->prv;
-            while (curr_stn != NULL && curr_stn->id >= index->id - max_car(index->cars, index->len_cars) && curr_stn->id < index->id) {
-                curr_stn = curr_stn->prv;
-            }
-            if (curr_stn != NULL) {
+            curr_stn = index;
+            if (curr_stn->prv != NULL) {
+                curr_stn = index->prv;
+                while (curr_stn->prv != NULL && curr_stn->id >= index->id - max_car(index->cars, index->len_cars) && curr_stn->id < index->id) {
+                    curr_stn = curr_stn->prv;
+                }
+                if (curr_stn->id < index->id - max_car(index->cars, index->len_cars) || curr_stn->id > index->id) {
+                    curr_stn = curr_stn->nxt;
+                }
                 while (curr_stn->id < index->id) {
                     if (curr_stn->color == 0) {
                         curr_stn->color = 1;
