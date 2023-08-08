@@ -180,11 +180,14 @@ int main (int argc, char *argv[])
     }
 
     stn *curr_stn = first_stn;
-    while (curr_stn != NULL) {
+    while (curr_stn->nxt != NULL) {
         free(curr_stn->cars);
         free(curr_stn->prv);
         curr_stn = curr_stn->nxt;
     }
+    free(curr_stn->cars);
+    free(curr_stn->prv);
+    free(curr_stn);
 
     fclose(file_input);
     fclose(file_output);
@@ -533,5 +536,7 @@ int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
     return -1;
 }
 
-// -> implementare cars come una lista
-// -> fix memory leaks
+// bottle neck:
+// -> iterare per trovare stazione
+// -> range per stazioni sx, controllo più stazioni del necessario
+// -> strol si prende il 5%
