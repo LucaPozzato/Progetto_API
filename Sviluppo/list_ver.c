@@ -50,7 +50,7 @@ int main (int argc, char *argv[])
             return(0);
         }
         #else
-        file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_100.txt", "r");
+        file_input = fopen("/Users/luca/Documents/Progetto-API/Test/archivio_test_aperti/open_1.txt", "r");
         if (file_input == NULL) {
             perror("Error opening input file");
             return(0);
@@ -82,6 +82,11 @@ int main (int argc, char *argv[])
     int n_stations = 0;
 
     while ((c = getc_unlocked(file_input)) != EOF) {
+        station = 0;
+        len_cars = 0;
+        car = 0;
+        destination = 0;
+
         index = 0;
         line[index] = c;
         index++;
@@ -94,11 +99,33 @@ int main (int argc, char *argv[])
             int m_car = 0;
             f = 0;
             index  = 0;
-            station = get_int(file_input, line);
-            len_cars = get_int(file_input, line);
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                station = (line[i] - '0') + (10 * station);
+            }
+            index  = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                len_cars = (line[i] - '0') + (10 * len_cars);
+            }
             cars = (int *) calloc(len_cars, sizeof(int));
             for (int i = 0; i < len_cars; i++) {
-                cars[i] = get_int(file_input, line);
+                car = 0;
+                index = 0;
+                while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                    line[index] = c;
+                    index++;
+                }
+                for (int i = 0; i < index; i++) {
+                    car = (line[i] - '0') + (10 * car);
+                }
+                cars[i] = car;
                 if (cars[i] > m_car) {
                     m_car = cars[i];
                 }
@@ -123,7 +150,14 @@ int main (int argc, char *argv[])
             }
         }
         else if (strcmp(line, "demolisci-stazione") == 0) {
-            station = get_int(file_input, line);
+            index  = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                station = (line[i] - '0') + (10 * station);
+            }
             f = 0;
             result = del_station(first_stn, station, &f);
             if (f == 1) {
@@ -143,8 +177,22 @@ int main (int argc, char *argv[])
             }
         }
         else if (strcmp(line, "aggiungi-auto") == 0) {
-            station = get_int(file_input, line);
-            car = get_int(file_input, line);
+            index = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                station = (line[i] - '0') + (10 * station);
+            }
+            index  = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                car = (line[i] - '0') + (10 * car);
+            }
             result = add_car(last_stn, station, car);
             if (result != NULL) {
                 last_stn = result;
@@ -155,8 +203,22 @@ int main (int argc, char *argv[])
             }
         }
         else if (strcmp(line, "rottama-auto") == 0) {
-            station = get_int(file_input, line);
-            car = get_int(file_input, line);
+            index = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                station = (line[i] - '0') + (10 * station);
+            }
+            index  = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                car = (line[i] - '0') + (10 * car);
+            }
             if (del_car(first_stn, new_cars, station, car) == 1) {
                 fprintf(file_output, "rottamata\n");
             }
@@ -165,8 +227,22 @@ int main (int argc, char *argv[])
             }
         }
         else if (strcmp(line, "pianifica-percorso") == 0) {
-            station = get_int(file_input, line);
-            destination = get_int(file_input, line);
+            index = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                station = (line[i] - '0') + (10 * station);
+            }
+            index  = 0;
+            while ((c = getc_unlocked(file_input)) != ' ' && c != '\n') {
+                line[index] = c;
+                index++;
+            }
+            for (int i = 0; i < index; i++) {
+                destination = (line[i] - '0') + (10 * destination);
+            }
 
             if (station == destination) {
                 fprintf(file_output, "%d\n", station);
