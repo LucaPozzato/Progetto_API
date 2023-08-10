@@ -435,7 +435,6 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
             }
             else if (curr_stn->id == stn_start) {
                 strt_stn = curr_stn;
-                // printf("max car: %d, percorso: %d -> %d\n", m_car, stn_end, stn_start);
                 break;
             }
             curr_stn = curr_stn->nxt;
@@ -479,17 +478,19 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
                 for (int i = 0; i < len_path; i++) {
                     printf("%d ", path[i]);
                 }
-                printf("\n\n-------\n\n");
-            }
-            else {
-                printf("no path found\n\n-------\n\n");
             }
         #endif
         free(queue);
+        # if debug_queue
+            printf("\n\n----\n\n");
+        # endif
         return len_path;
     }
     else {
         free(queue);
+        # if debug_queue
+            printf("\n\n----\n\n");
+        # endif
         return 0;
     }
 }
@@ -497,10 +498,12 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
 int bfs_dx (stn *end_stn, q_str *queue, int direction) {
     stn *index = NULL;
     stn *curr_stn = NULL;
+    stn *last_stn = NULL;
     q_str *v;
     int len_queue = 1;
     int i = 0;
     int car = 0;
+    last_stn = (queue + i)->id;
     while (i < len_queue) {
         v = queue + i;
         index = v->id;
@@ -516,15 +519,16 @@ int bfs_dx (stn *end_stn, q_str *queue, int direction) {
         if (index == end_stn) {
             return i + 1;
         }
-        curr_stn = index;
+        curr_stn = last_stn;
         if (curr_stn->nxt != NULL) {
-            curr_stn = index->nxt;
             car = index->m_car;
+            curr_stn = curr_stn->nxt;
             while (curr_stn != NULL && curr_stn->id <= index->id + car && curr_stn->id > index->id) {
                 if (curr_stn->color == false) {
                     curr_stn->color = true;
                     (queue + len_queue)->id = curr_stn;
                     (queue + len_queue)->father = index;
+                    last_stn = curr_stn;
                     len_queue++;
                 }
                 curr_stn = curr_stn->nxt;
@@ -538,10 +542,12 @@ int bfs_dx (stn *end_stn, q_str *queue, int direction) {
 int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
     stn *index = NULL;
     stn *curr_stn = NULL;
+    stn *last_stn = NULL;
     q_str *v;
     int len_queue = 1;
     int i = 0;
     int car = 0;
+    last_stn = (queue + i)->id;
     while (i < len_queue) {
         v = queue + i;
         index = v->id;
@@ -557,9 +563,9 @@ int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
         if (index == end_stn) {
             return i + 1;
         }
-        curr_stn = index;
+        curr_stn = last_stn;
         if (curr_stn->nxt != NULL) {
-            curr_stn = index->nxt;
+            curr_stn = curr_stn->nxt;
             while (curr_stn != NULL && curr_stn->id <= index->id + m_car && curr_stn->id <= end_stn->id) {
                 car = curr_stn->m_car;
                 if (index->id >= curr_stn->id - car && index->id < curr_stn->id) {
@@ -567,6 +573,7 @@ int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
                         curr_stn->color = true;
                         (queue + len_queue)->id = curr_stn;
                         (queue + len_queue)->father = index;
+                        last_stn = curr_stn;
                         len_queue++;
                     }
                 }
