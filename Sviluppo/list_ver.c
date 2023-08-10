@@ -19,6 +19,7 @@ typedef struct q_str {
     struct stn *father;
 } q_str;
 
+int get_int (FILE *file_input);
 stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int *cars, int len_cars, int m_car, int *f);
 stn* del_station (stn *first_stn, int station, int *f);
 stn* add_car (stn *last_stn, int station, int car);
@@ -30,9 +31,9 @@ int rebuild_graph (stn *start_stn, stn *end_stn, stn **next_nodes);
 
 int main (int argc, char *argv[])
 {
-    char *line = NULL;
-    size_t line_len = 0;
-    ssize_t line_read;
+    char line[50];
+    char c = 0;
+    int index = 0;
     FILE *file_input = NULL;
     FILE *file_output = NULL;
 
@@ -65,7 +66,6 @@ int main (int argc, char *argv[])
         file_output = stdout;
     #endif
 
-    char *command = NULL;
     int station = 0;
     int destination = 0;
     int car = 0;
@@ -81,16 +81,23 @@ int main (int argc, char *argv[])
     int f = 0;
     int n_stations = 0;
 
-    while ((line_read = getline(&line, &line_len, file_input)) != -1) {
-        command = strtok(line, " ");
-        if (strcmp(command, "aggiungi-stazione") == 0) {
+    while ((c = getc_unlocked(file_input)) != EOF) {
+        index = 0;
+        line[index] = c;
+        index++;
+        while ((c = getc_unlocked(file_input)) != ' ') {
+            line[index] = c;
+            index++;
+        }
+        line[index] = '\0';
+        if (strcmp(line, "aggiungi-stazione") == 0) {
             int m_car = 0;
             f = 0;
-            station = (int)strtol(strtok(NULL, " "), NULL, 10);
-            len_cars = (int)strtol(strtok(NULL, " "), NULL, 10);
+            station = get_int(file_input);
+            len_cars = get_int(file_input);
             cars = (int *) calloc(len_cars, sizeof(int));
             for (int i = 0; i < len_cars; i++) {
-                cars[i] = (int)strtol(strtok(NULL, " "), NULL, 10);
+                cars[i] = get_int(file_input);
                 if (cars[i] > m_car) {
                     m_car = cars[i];
                 }
@@ -114,8 +121,8 @@ int main (int argc, char *argv[])
                 free(cars);
             }
         }
-        else if (strcmp(command, "demolisci-stazione") == 0) {
-            station = (int)strtol(strtok(NULL, " "), NULL, 10);
+        else if (strcmp(line, "demolisci-stazione") == 0) {
+            station = get_int(file_input);
             f = 0;
             result = del_station(first_stn, station, &f);
             if (f == 1) {
@@ -134,9 +141,9 @@ int main (int argc, char *argv[])
                 fprintf(file_output, "non demolita\n");
             }
         }
-        else if (strcmp(command, "aggiungi-auto") == 0) {
-            station = (int)strtol(strtok(NULL, " "), NULL, 10);
-            car = (int)strtol(strtok(NULL, " "), NULL, 10);
+        else if (strcmp(line, "aggiungi-auto") == 0) {
+            station = get_int(file_input);
+            car = get_int(file_input);
             result = add_car(last_stn, station, car);
             if (result != NULL) {
                 last_stn = result;
@@ -146,9 +153,9 @@ int main (int argc, char *argv[])
                 fprintf(file_output, "non aggiunta\n");
             }
         }
-        else if (strcmp(command, "rottama-auto") == 0) {
-            station = (int)strtol(strtok(NULL, " "), NULL, 10);
-            car = (int)strtol(strtok(NULL, " "), NULL, 10);
+        else if (strcmp(line, "rottama-auto") == 0) {
+            station = get_int(file_input);
+            car = get_int(file_input);
             if (del_car(first_stn, new_cars, station, car) == 1) {
                 fprintf(file_output, "rottamata\n");
             }
@@ -156,9 +163,9 @@ int main (int argc, char *argv[])
                 fprintf(file_output, "non rottamata\n");
             }
         }
-        else if (strcmp(command, "pianifica-percorso") == 0) {
-            station = (int)strtol(strtok(NULL, " "), NULL, 10);
-            destination = (int)strtol(strtok(NULL, " "), NULL, 10);
+        else if (strcmp(line, "pianifica-percorso") == 0) {
+            station = get_int(file_input);
+            destination = get_int(file_input);
 
             if (station == destination) {
                 fprintf(file_output, "%d\n", station);
@@ -203,9 +210,16 @@ int main (int argc, char *argv[])
 
     fclose(file_input);
     fclose(file_output);
-    if (line)
-        free(line);
     return 0;
+}
+
+int get_int (FILE *input_file) {
+    int number = 0;
+    char c = 0;
+    while ((c = getc_unlocked(input_file)) != ' ' && c != '\n') {
+        number = (c - '0') + (number << 3) + (number << 1);
+    }
+    return number;
 }
 
 stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int *cars, int len_cars, int m_car, int *f) {
