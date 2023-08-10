@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 typedef struct stn
 {
@@ -8,7 +9,7 @@ typedef struct stn
     int m_car;
     int *cars;
     int len_cars;
-    int color;
+    bool color;
     struct stn *nxt;
     struct stn *prv;
 } stn;
@@ -18,7 +19,7 @@ typedef struct q_str {
     struct stn *father;
 } q_str;
 
-stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars, int m_car);
+stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int *cars, int len_cars, int m_car, int *f);
 stn* del_station (stn *first_stn, int station, int *f);
 stn* add_car (stn *last_stn, int station, int car);
 int del_car (stn *first_stn, int *new_cars, int station, int car);
@@ -84,6 +85,7 @@ int main (int argc, char *argv[])
         command = strtok(line, " ");
         if (strcmp(command, "aggiungi-stazione") == 0) {
             int m_car = 0;
+            f = 0;
             station = (int)strtol(strtok(NULL, " "), NULL, 10);
             len_cars = (int)strtol(strtok(NULL, " "), NULL, 10);
             cars = (int *) calloc(len_cars, sizeof(int));
@@ -94,10 +96,15 @@ int main (int argc, char *argv[])
                 }
             }
             new_stn = (stn *) calloc(1, sizeof(stn));
-            result = add_station(first_stn, new_stn, station, cars, len_cars, m_car);
+            result = add_station(first_stn, new_stn, last_stn, station, cars, len_cars, m_car, &f);
             if (result != NULL) {
-                first_stn = result;
-                last_stn = new_stn;
+                if (f == 1) {
+                    first_stn = result;
+                    last_stn = first_stn;
+                }
+                else {
+                    last_stn = result;
+                }
                 fprintf(file_output, "aggiunta\n");
                 n_stations++;
             }
@@ -158,7 +165,6 @@ int main (int argc, char *argv[])
             }
             else {
                 path = (int *) calloc(100, sizeof(int));
-                // fix calloc of 100
                 len_path = search_path(first_stn, station, destination, path, n_stations);
                 if (len_path != 0) {
                     if (station > destination) {
@@ -202,8 +208,8 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_cars, int m_car) {
-    stn *curr_stn = first_stn;
+stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int *cars, int len_cars, int m_car, int *f) {
+    stn *curr_stn = last_stn;
 
     new_stn->id = station;
     new_stn->m_car = m_car;
@@ -212,6 +218,7 @@ stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_
 
     if (first_stn == NULL) {
         first_stn = new_stn;
+        *f = 1;
         return first_stn;
     }
     else if (first_stn->nxt == NULL && first_stn->prv == NULL) {
@@ -224,43 +231,65 @@ stn* add_station (stn *first_stn, stn *new_stn, int station, int *cars, int len_
             first_stn->prv = new_stn;
             first_stn = new_stn;
         }
+        *f = 1;
         return first_stn;
     }
     else if (first_stn->id > new_stn->id) {
         new_stn->nxt = first_stn;
         first_stn->prv = new_stn;
         first_stn = new_stn;
+        *f = 1;
         return first_stn;
     }
     else {
-        while (curr_stn->id < new_stn->id && curr_stn->nxt != NULL) {
-            if (curr_stn->id == new_stn->id) {
+        if (curr_stn->id <= new_stn->id) {
+            while (curr_stn->id < new_stn->id && curr_stn->nxt != NULL) {
+                if (curr_stn->id == new_stn->id) {
+                    return NULL;
+                }
+                curr_stn = curr_stn->nxt;
+            }
+            if (curr_stn->id == new_stn->id || curr_stn->prv->id == new_stn->id) {
                 return NULL;
             }
-            curr_stn = curr_stn->nxt;
-        }
-        if (curr_stn->id == new_stn->id || curr_stn->prv->id == new_stn->id) {
-            return NULL;
-        }
-        if (curr_stn->nxt == NULL) {
-            if (curr_stn->id > new_stn->id) {
+            if (curr_stn->nxt == NULL) {
+                if (curr_stn->id > new_stn->id) {
+                    curr_stn->prv->nxt = new_stn;
+                    new_stn->prv = curr_stn->prv;
+                    curr_stn->prv = new_stn;
+                    new_stn->nxt = curr_stn;
+                }
+                else {
+                    curr_stn->nxt = new_stn;
+                    new_stn->prv = curr_stn;
+                }
+                return new_stn;
+            }
+            else {
                 curr_stn->prv->nxt = new_stn;
                 new_stn->prv = curr_stn->prv;
                 curr_stn->prv = new_stn;
                 new_stn->nxt = curr_stn;
+                return new_stn;
             }
-            else {
-                curr_stn->nxt = new_stn;
-                new_stn->prv = curr_stn;
-            }
-            return first_stn;
         }
         else {
-            curr_stn->prv->nxt = new_stn;
-            new_stn->prv = curr_stn->prv;
-            curr_stn->prv = new_stn;
-            new_stn->nxt = curr_stn;
-            return first_stn;
+            while (curr_stn->id > new_stn->id && curr_stn->prv != NULL) {
+                if (curr_stn->id == new_stn->id) {
+                    return NULL;
+                }
+                curr_stn = curr_stn->prv;
+            }
+            if (curr_stn->id == new_stn->id || curr_stn->nxt->id == new_stn->id) {
+                return NULL;
+            }
+            else {
+                curr_stn->nxt->prv = new_stn;
+                new_stn->nxt = curr_stn->nxt;
+                curr_stn->nxt = new_stn;
+                new_stn->prv = curr_stn;
+                return new_stn;
+            }
         }
     }
 }
@@ -381,7 +410,7 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
 
     if (direction == 1) {
         while (curr_stn != NULL) {
-            curr_stn->color = 0;
+            curr_stn->color = false;
             if (curr_stn->id == stn_start) {
                 strt_stn = curr_stn;
             }
@@ -394,8 +423,8 @@ int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_st
     }
     else {
         while (curr_stn != NULL) {
-            curr_stn->color = 0;
-            if (curr_stn->id >= stn_end) {
+            curr_stn->color = false;
+            if (curr_stn->id > stn_end) {
                 car = curr_stn->m_car;
                 if (car > m_car) {
                     m_car = car;
@@ -492,8 +521,8 @@ int bfs_dx (stn *end_stn, q_str *queue, int direction) {
             curr_stn = index->nxt;
             car = index->m_car;
             while (curr_stn != NULL && curr_stn->id <= index->id + car && curr_stn->id > index->id) {
-                if (curr_stn->color == 0) {
-                    curr_stn->color = 1;
+                if (curr_stn->color == false) {
+                    curr_stn->color = true;
                     (queue + len_queue)->id = curr_stn;
                     (queue + len_queue)->father = index;
                     len_queue++;
@@ -534,8 +563,8 @@ int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
             while (curr_stn != NULL && curr_stn->id <= index->id + m_car && curr_stn->id <= end_stn->id) {
                 car = curr_stn->m_car;
                 if (index->id >= curr_stn->id - car && index->id < curr_stn->id) {
-                    if (curr_stn->color == 0) {
-                        curr_stn->color = 1;
+                    if (curr_stn->color == false) {
+                        curr_stn->color = true;
                         (queue + len_queue)->id = curr_stn;
                         (queue + len_queue)->father = index;
                         len_queue++;
@@ -552,4 +581,8 @@ int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
 // bottle neck:
 // -> iterare per trovare stazione
 // -> range per stazioni sx, controllo più stazioni del necessario
-// -> strol si prende il 5%
+// -> strole si prende il 10%, strtok il 5%
+// -> algoritmo più afficiente per aggiungi stazioni, meno stazioni da iterare, iterare solo 1/4 delle stazioni memorizzando inizio metà e fine 
+//      -> ora algoritmo è quasi bilanciato sulla metà
+//      -> oppure implementare una hashtable per la ricerca delle stazioni
+// 
