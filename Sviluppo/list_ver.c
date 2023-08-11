@@ -19,10 +19,22 @@ typedef struct q_str {
     struct stn *father;
 } q_str;
 
+typedef struct bst {
+    struct stn *id;
+    struct bst *father;
+    struct bst *right;
+    struct bst *left;
+} bst;
+
 int get_int (FILE *file_input);
+bst* add_bst (bst **root, bst *leaf);
+bst* successor (bst *leaf);
+bst* min_bst (bst *root);
+bst* del_bst (bst **root, bst *leaf);
+bst* find_bst (bst *root, int stn);
 stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int *cars, int len_cars, int m_car, int *f);
-stn* del_station (stn *first_stn, int station, int *f);
-stn* add_car (stn *last_stn, int station, int car);
+stn* del_station (stn *first_stn, stn *to_del, int station, int *f);
+int add_car (stn *last_stn, int station, int car);
 int del_car (stn *first_stn, int *new_cars, int station, int car);
 int search_path (stn *first_stn, int stn_start, int stn_end, int *path, int n_stations);
 int bfs_dx (stn *end_stn, q_str *queue, int direction);
@@ -80,6 +92,10 @@ int main (int argc, char *argv[])
     int len_path = 0;
     int f = 0;
     int n_stations = 0;
+    bst *root = NULL;
+    bst *leaf = NULL;
+    bst *result_bst = NULL;
+    bst *found = NULL;
 
     while ((c = getc_unlocked(file_input)) != EOF) {
         index = 0;
@@ -102,8 +118,23 @@ int main (int argc, char *argv[])
                     m_car = cars[i];
                 }
             }
+
             new_stn = (stn *) calloc(1, sizeof(stn));
+            new_stn->id = station;
+            new_stn->m_car = m_car;
+            new_stn->cars = cars;
+            new_stn->len_cars = len_cars;
+
+            leaf = (bst *) calloc(1, sizeof(bst));
+            leaf->id = new_stn;
+            result_bst = add_bst(&root, leaf);
+            
+            if (result_bst != NULL) {
+                last_stn = result_bst->id;
+            }
+
             result = add_station(first_stn, new_stn, last_stn, station, cars, len_cars, m_car, &f);
+
             if (result != NULL) {
                 if (f == 1) {
                     first_stn = result;
@@ -124,18 +155,22 @@ int main (int argc, char *argv[])
         else if (strcmp(line, "demolisci-stazione") == 0) {
             station = get_int(file_input);
             f = 0;
-            result = del_station(first_stn, station, &f);
-            if (f == 1) {
-                first_stn = result;
-                last_stn = first_stn;
-                fprintf(file_output, "demolita\n"); 
-                n_stations--;
-            }
-            else if (result != NULL) {
-                first_stn = result;
-                last_stn = first_stn;
-                fprintf(file_output, "demolita\n");
-                n_stations--;
+            found = find_bst(root, station);
+            if (found != NULL) {
+                result = del_station(first_stn, found->id, station, &f);
+                del_bst(&root, found);
+                if (f == 1) {
+                    first_stn = result;
+                    last_stn = first_stn;
+                    fprintf(file_output, "demolita\n"); 
+                    n_stations--;
+                }
+                else if (result != NULL) {
+                    first_stn = result;
+                    last_stn = first_stn;
+                    fprintf(file_output, "demolita\n");
+                    n_stations--;
+                }
             }
             else {
                 fprintf(file_output, "non demolita\n");
@@ -144,10 +179,11 @@ int main (int argc, char *argv[])
         else if (strcmp(line, "aggiungi-auto") == 0) {
             station = get_int(file_input);
             car = get_int(file_input);
-            result = add_car(last_stn, station, car);
-            if (result != NULL) {
-                last_stn = result;
-                fprintf(file_output, "aggiunta\n");
+            found = find_bst(root, station);
+            if (found != NULL) {
+                if (add_car(found->id, station, car) == 1) {
+                    fprintf(file_output, "aggiunta\n");
+                }
             }
             else {
                 fprintf(file_output, "non aggiunta\n");
@@ -156,8 +192,14 @@ int main (int argc, char *argv[])
         else if (strcmp(line, "rottama-auto") == 0) {
             station = get_int(file_input);
             car = get_int(file_input);
-            if (del_car(first_stn, new_cars, station, car) == 1) {
-                fprintf(file_output, "rottamata\n");
+            found = find_bst(root, station);
+            if (found != NULL) {
+                if (del_car(found->id, new_cars, station, car) == 1) {
+                    fprintf(file_output, "rottamata\n");
+                }
+                else {
+                    fprintf(file_output, "non rottamata\n");
+                }
             }
             else {
                 fprintf(file_output, "non rottamata\n");
@@ -222,13 +264,107 @@ int get_int (FILE *input_file) {
     return number;
 }
 
+bst* add_bst (bst **root, bst *leaf) {
+    bst *prv_st = NULL;
+    bst *curr_stn = *root;
+    while (curr_stn != NULL) {
+        prv_st = curr_stn;
+        if (leaf->id->id < curr_stn->id->id) {
+            curr_stn = curr_stn->left;
+        }
+        else if (leaf->id->id == curr_stn->id->id) {
+            return NULL;
+        }
+        else {
+            curr_stn = curr_stn->right;
+        }
+    }
+    leaf->father = prv_st;
+    if (prv_st == NULL) {
+        *root = leaf;
+        return *root;
+    }
+    else if (leaf->id->id < prv_st->id->id) {
+        prv_st->left = leaf;
+    }
+    else {
+        prv_st->right = leaf;
+    }
+    return prv_st;
+}
+
+bst* successor (bst *leaf) {
+    bst *prv = NULL;
+    if (leaf->right != NULL) {
+        return min_bst(leaf->right);
+    }
+    prv = leaf->father;
+    while (prv != NULL && prv->right == leaf) {
+        leaf = prv;
+        prv = prv->father;
+    }
+    return prv;
+}
+
+bst* min_bst (bst *root) {
+    bst *curr = root;
+    while (curr->left != NULL) {
+        curr = curr->left;
+    }
+    return curr;
+}
+
+bst* del_bst (bst **root, bst *leaf) {
+    bst *del = NULL;
+    bst *tree = NULL;
+    if (leaf->left == NULL || leaf->right == NULL) {
+        del = leaf;
+    }
+    else {
+        del = successor(leaf);
+    }
+    if (del->left != NULL) {
+        tree = del->left;
+    }
+    else {
+        tree = del->right;
+    }
+    if (tree != NULL) {
+        tree->father = del->father;
+    }
+    if (del->father == NULL) {
+        *root = tree;
+    }
+    else if (del == del->father->left) {
+        del->father->left = tree;
+    }
+    else {
+        del->father->right = tree;
+    }
+    if (del->id != leaf->id) {
+        leaf->id = del->id;
+    }
+    if (del != leaf) {
+        leaf->id = del->id;
+    }
+    free(del);
+    return NULL;
+}
+
+bst* find_bst (bst *root, int stn) {
+    if (root == NULL || root->id->id == stn) {
+        return root;
+    }
+    if (root->id->id < stn) {
+        return find_bst(root->right, stn);
+    }
+    else {
+        return find_bst(root->left, stn);
+    }
+}
+
 stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int *cars, int len_cars, int m_car, int *f) {
     stn *curr_stn = last_stn;
-
-    new_stn->id = station;
-    new_stn->m_car = m_car;
-    new_stn->cars = cars;
-    new_stn->len_cars = len_cars;
 
     if (first_stn == NULL) {
         first_stn = new_stn;
@@ -308,8 +444,8 @@ stn* add_station (stn *first_stn, stn *new_stn, stn *last_stn, int station, int 
     }
 }
 
-stn* del_station (stn *first_stn, int station, int *f) {
-    stn *curr_stn = first_stn;
+stn* del_station (stn *first_stn, stn *to_del, int station, int *f) {
+    stn *curr_stn = to_del;
     while (curr_stn != NULL) {
         if (curr_stn->id == station) {
             if (curr_stn->nxt == NULL && curr_stn->prv == NULL) {
@@ -342,7 +478,7 @@ stn* del_station (stn *first_stn, int station, int *f) {
     return NULL;
 }
 
-stn* add_car (stn *last_stn, int station, int car) {
+int add_car (stn *last_stn, int station, int car) {
     stn *curr_stn = last_stn;
     int len_cars = 0;
     if (last_stn->id > station) {
@@ -363,9 +499,9 @@ stn* add_car (stn *last_stn, int station, int car) {
         curr_stn->cars = (int *) realloc(curr_stn->cars, (curr_stn->len_cars + 1) * sizeof(int));
         curr_stn->cars[len_cars] = car;
         curr_stn->len_cars = len_cars + 1;
-        return curr_stn;
+        return 1;
     }
-    return NULL;
+    return 0;
 }
 
 int del_car (stn *first_stn, int *new_cars, int station, int car) {
@@ -598,12 +734,3 @@ int bfs_sx (stn *end_stn, q_str *queue, int direction, int m_car) {
     }
     return -1;
 }
-
-// bottle neck:
-// -> iterare per trovare stazione
-// -> range per stazioni sx, controllo più stazioni del necessario
-// -> strole si prende il 10%, strtok il 5%
-// -> algoritmo più afficiente per aggiungi stazioni, meno stazioni da iterare, iterare solo 1/4 delle stazioni memorizzando inizio metà e fine 
-//      -> ora algoritmo è quasi bilanciato sulla metà
-//      -> oppure implementare una hashtable per la ricerca delle stazioni
-// 
