@@ -179,14 +179,19 @@ int main (int argc, char *argv[])
         else if (strcmp(line, "aggiungi-auto") == 0) {
             station = get_int(file_input);
             car = get_int(file_input);
-            found = find_bst(root, station);
-            if (found != NULL) {
-                if (add_car(found->id, station, car) == 1) {
+            if (last_stn->id != station) { 
+                found = find_bst(root, station);
+                if (found != NULL) {
+                    add_car(found->id, station, car);
                     fprintf(file_output, "aggiunta\n");
                 }
+                else {
+                    fprintf(file_output, "non aggiunta\n");
+                } 
             }
             else {
-                fprintf(file_output, "non aggiunta\n");
+                add_car(last_stn, station, car);
+                fprintf(file_output, "aggiunta\n");
             }
         }
         else if (strcmp(line, "rottama-auto") == 0) {
@@ -478,65 +483,44 @@ stn* del_station (stn *first_stn, stn *to_del, int station, int *f) {
     return NULL;
 }
 
-int add_car (stn *last_stn, int station, int car) {
-    stn *curr_stn = last_stn;
+int add_car (stn *curr_stn, int station, int car) {
     int len_cars = 0;
-    if (last_stn->id > station) {
-        while (curr_stn != NULL && curr_stn->id != station) {
-            curr_stn = curr_stn->prv;
-        }
+    if (curr_stn->m_car < car) {
+        curr_stn->m_car = car;
     }
-    else {
-        while (curr_stn != NULL && curr_stn->id != station) {
-            curr_stn = curr_stn->nxt;
-        }
-    }
-    if (curr_stn != NULL) {
-        if (curr_stn->m_car < car) {
-            curr_stn->m_car = car;
-        }
-        len_cars = curr_stn->len_cars;
-        curr_stn->cars = (int *) realloc(curr_stn->cars, (curr_stn->len_cars + 1) * sizeof(int));
-        curr_stn->cars[len_cars] = car;
-        curr_stn->len_cars = len_cars + 1;
-        return 1;
-    }
-    return 0;
+    len_cars = curr_stn->len_cars;
+    curr_stn->cars = (int *) realloc(curr_stn->cars, (curr_stn->len_cars + 1) * sizeof(int));
+    curr_stn->cars[len_cars] = car;
+    curr_stn->len_cars = len_cars + 1;
+    return 1;
 }
 
-int del_car (stn *first_stn, int *new_cars, int station, int car) {
-    stn *curr_stn = first_stn;
+int del_car (stn *curr_stn, int *new_cars, int station, int car) {
     int len_cars = 0;
     int k = 0;
     int m_car = 0;
-    while (curr_stn != NULL) {
-        if (curr_stn->id == station) {
-            for (int i = 0; i < curr_stn->len_cars; i++) {
-                if (curr_stn->cars[i] == car){
-                    curr_stn->cars[i] = -1;
-                    len_cars = curr_stn->len_cars - 1;
-                    new_cars = (int *) calloc(len_cars, sizeof(int));
-                    for (int j = 0; j < curr_stn->len_cars; j++) {
-                        if (curr_stn->cars[j] != -1) {
-                            new_cars[k] = curr_stn->cars[j];
-                            if (new_cars[k] > m_car) {
-                                m_car = new_cars[k];
-                            }
-                            k++;
-                        }
+    for (int i = 0; i < curr_stn->len_cars; i++) {
+        if (curr_stn->cars[i] == car){
+            curr_stn->cars[i] = -1;
+            len_cars = curr_stn->len_cars - 1;
+            new_cars = (int *) calloc(len_cars, sizeof(int));
+            for (int j = 0; j < curr_stn->len_cars; j++) {
+                if (curr_stn->cars[j] != -1) {
+                    new_cars[k] = curr_stn->cars[j];
+                    if (new_cars[k] > m_car) {
+                        m_car = new_cars[k];
                     }
-                    free(curr_stn->cars);
-                    curr_stn->cars = new_cars;
-                    curr_stn->len_cars = len_cars;
-                    if (curr_stn->m_car == car) {
-                        curr_stn->m_car = m_car;
-                    }
-                    return 1;
+                    k++;
                 }
             }
-            return 0;
+            free(curr_stn->cars);
+            curr_stn->cars = new_cars;
+            curr_stn->len_cars = len_cars;
+            if (curr_stn->m_car == car) {
+                curr_stn->m_car = m_car;
+            }
+            return 1;
         }
-        curr_stn = curr_stn->nxt;
     }
     return 0;
     // si potrebbe ottimizzare iniziando gia a copiare l'array independentemente che la macchina sia presente o meno
